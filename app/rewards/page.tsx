@@ -1,0 +1,292 @@
+'use client'
+
+import { useState, useEffect, useMemo, useRef } from 'react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { Plus, Download, Filter, Copy } from 'lucide-react'
+import * as XLSX from 'xlsx'
+
+interface Reward {
+  id: number
+  teacherName: string
+  region: string
+  mosque: string
+  amountDue: number
+  amountPaid: number
+  month: string
+  year: number
+  notes?: string
+  createdAt: string
+}
+
+const months = [
+  { name: 'يناير', number: 1 },
+  { name: 'فبراير', number: 2 },
+  { name: 'مارس', number: 3 },
+  { name: 'أبريل', number: 4 },
+  { name: 'مايو', number: 5 },
+  { name: 'يونيو', number: 6 },
+  { name: 'يوليو', number: 7 },
+  { name: 'أغسطس', number: 8 },
+  { name: 'سبتمبر', number: 9 },
+  { name: 'أكتوبر', number: 10 },
+  { name: 'نوفمبر', number: 11 },
+  { name: 'ديسمبر', number: 12 },
+]
+
+export default function RewardsPage() {
+  const router = useRouter()
+  const isLoaded = useRef(false)
+  const [rewards, setRewards] = useState<Reward[]>([])
+  const [loading, setLoading] = useState(true)
+  const [selectedMonth, setSelectedMonth] = useState('')
+  const [selectedYear, setSelectedYear] = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
+
+  useEffect(() => {
+    // Load saved filters from localStorage on mount
+    const savedMonth = localStorage.getItem('rewardsFilterMonth')
+    const savedYear = localStorage.getItem('rewardsFilterYear')
+    const savedSearch = localStorage.getItem('rewardsFilterSearch')
+    
+    if (savedMonth) setSelectedMonth(savedMonth)
+    if (savedYear) setSelectedYear(savedYear)
+    else setSelectedYear('2025') // Set default only if no saved value
+    if (savedSearch) setSearchQuery(savedSearch)
+    
+    isLoaded.current = true
+    
+    // Fetch data after loading filters
+    fetchRewards()
+  }, [])
+
+  // Save filters to localStorage when user changes them
+  const handleMonthChange = (value: string) => {
+    setSelectedMonth(value)
+    if (isLoaded.current) localStorage.setItem('rewardsFilterMonth', value)
+  }
+
+  const handleYearChange = (value: string) => {
+    setSelectedYear(value)
+    if (isLoaded.current) localStorage.setItem('rewardsFilterYear', value)
+  }
+
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value)
+    if (isLoaded.current) localStorage.setItem('rewardsFilterSearch', value)
+  }
+
+  // Clear copy data when component mounts to prevent interference
+  useEffect(() => {
+    localStorage.removeItem('copyRewardData')
+  }, [])
+
+  useEffect(() => {
+    // Fetch data when filters change
+    fetchRewards()
+  }, [selectedMonth, selectedYear, searchQuery])
+
+  const fetchRewards = async () => {
+    try {
+      const params = new URLSearchParams()
+      if (selectedMonth) params.append('month', selectedMonth)
+      if (selectedYear) params.append('year', selectedYear)
+      
+      const res = await fetch(`/api/rewards?${params.toString()}`)
+      const data = await res.json()
+      setRewards(data.data || data)
+    } catch (error) {
+      console.error('Error:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const filteredRewards = useMemo(() => {
+    if (!searchQuery) return rewards
+    const query = searchQuery.toLowerCase()
+    return rewards.filter(
+      (r) =>
+        r.teacherName.toLowerCase().includes(query) ||
+        r.mosque.toLowerCase().includes(query)
+    )
+  }, [rewards, searchQuery])
+
+  const exportToExcel = () => {
+    const rows = filteredRewards.map((r) => ({
+      'اسم المدرس': r.teacherName,
+      'المنطقة': r.region,
+      'المسجد': r.mosque,
+      'المبلغ المستحق': r.amountDue,
+      'الموجوع': r.amountPaid,
+      'الشهر': r.month,
+      'السنة': r.year,
+      'ملاحظات': r.notes || '',
+    }))
+
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'المكافآت')
+    XLSX.writeFile(wb, 'rewards.xlsx')
+  }
+
+  const handleDelete = async (id: number) => {
+    if (!confirm('هل أنت متأكد من حذف هذا السجل؟')) return
+    try {
+      await fetch(`/api/rewards/${id}`, { method: 'DELETE' })
+      fetchRewards()
+    } catch (error) {
+      console.error('Error:', error)
+    }
+  }
+
+  const handleCopy = (reward: Reward) => {
+    const copyData = {
+      teacherName: reward.teacherName,
+      region: reward.region,
+      mosque: reward.mosque,
+      amountDue: reward.amountDue,
+      amountPaid: reward.amountPaid,
+      month: reward.month,
+      year: reward.year,
+      notes: reward.notes || '',
+    }
+    localStorage.setItem('copyRewardData', JSON.stringify(copyData))
+    router.push('/rewards/new')
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <div className="bg-gradient-to-br from-primary-dark to-primary text-white p-6">
+        <h1 className="text-2xl font-bold">المكافآت الشهرية</h1>
+        <p className="text-white/70 mt-1">إدارة مكافآت المدرسين حسب الشهور</p>
+      </div>
+
+      <div className="p-6">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <div className="flex flex-wrap items-center gap-4 mb-6">
+            <div className="flex items-center gap-2">
+              <Filter size={20} className="text-gray-500" />
+              <span className="font-semibold text-gray-700">تصفية:</span>
+            </div>
+            
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              placeholder="ابحث باسم المدرس أو المسجد..."
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20"
+            />
+
+            <select
+              value={selectedMonth}
+              onChange={(e) => handleMonthChange(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20"
+            >
+              <option value="">كل الشهور</option>
+              {months.map((month) => (
+                <option key={month.name} value={month.name}>{month.number} - {month.name}</option>
+              ))}
+            </select>
+
+            <select
+              value={selectedYear}
+              onChange={(e) => handleYearChange(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20"
+            >
+              <option value="2025">2025</option>
+              <option value="2026">2026</option>
+              <option value="2027">2027</option>
+              <option value="2028">2028</option>
+              <option value="2029">2029</option>
+              <option value="2030">2030</option>
+              <option value="2031">2031</option>
+            </select>
+
+            <div className="flex-1" />
+
+            <Link
+              href="/rewards/new"
+              className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-dark transition-colors"
+            >
+              <Plus size={16} />
+              <span>إضافة مكافأة</span>
+            </Link>
+
+            <button
+              onClick={exportToExcel}
+              className="flex items-center gap-2 px-4 py-2 bg-gold text-primary-dark rounded-lg text-sm font-medium hover:bg-gold-light transition-colors"
+            >
+              <Download size={16} />
+              <span>تصدير</span>
+            </button>
+          </div>
+
+          {loading ? (
+            <div className="flex justify-center py-12">
+              <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+            </div>
+          ) : filteredRewards.length === 0 ? (
+            <div className="text-center py-12 text-gray-500">
+              <p>لا توجد سجلات مكافآت</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
+              <table className="w-full">
+                <thead className="sticky top-0 z-10 bg-gray-50 shadow-sm">
+                  <tr className="border-b border-gray-200">
+                    <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700 bg-gray-50">اسم المدرس</th>
+                    <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700 bg-gray-50">المنطقة</th>
+                    <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700 bg-gray-50">المسجد</th>
+                    <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700 bg-gray-50">المبلغ المستحق</th>
+                    <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700 bg-gray-50">المجموع</th>
+                    <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700 bg-gray-50">الشهر</th>
+                    <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700 bg-gray-50">السنة</th>
+                    <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700 bg-gray-50">الإجراءات</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredRewards.map((reward) => (
+                    <tr key={reward.id} className="border-b border-gray-100 hover:bg-gray-50">
+                      <td className="px-4 py-3 text-sm text-gray-900">{reward.teacherName}</td>
+                      <td className="px-4 py-3 text-sm text-gray-700">{reward.region}</td>
+                      <td className="px-4 py-3 text-sm text-gray-700">{reward.mosque}</td>
+                      <td className="px-4 py-3 text-sm text-gray-900 font-semibold">{reward.amountDue.toLocaleString()}</td>
+                      <td className="px-4 py-3 text-sm text-gray-900 font-semibold">{reward.amountPaid.toLocaleString()}</td>
+                      <td className="px-4 py-3 text-sm text-gray-700">{reward.month}</td>
+                      <td className="px-4 py-3 text-sm text-gray-700">{reward.year}</td>
+                      <td className="px-4 py-3 text-sm">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleCopy(reward)}
+                            className="text-primary hover:text-primary-dark text-sm"
+                            title="نسخ"
+                          >
+                            <Copy size={14} />
+                          </button>
+                          <span className="text-gray-300">|</span>
+                          <Link
+                            href={`/rewards/${reward.id}/edit`}
+                            className="text-amber-600 hover:text-amber-700 text-sm"
+                          >
+                            تعديل
+                          </Link>
+                          <span className="text-gray-300">|</span>
+                          <button
+                            onClick={() => handleDelete(reward.id)}
+                            className="text-red-600 hover:text-red-700 text-sm"
+                          >
+                            حذف
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}

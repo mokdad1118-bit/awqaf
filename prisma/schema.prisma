@@ -1,0 +1,75 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Mosque {
+  id          Int      @id @default(autoincrement())
+  name        String
+  city        String
+  location    String
+  category    String   // أ, ب, ج, د
+  type        String   // عام, مركزي, عام أثري, مركزي أثري
+  area        Float?
+  status      String   // الحالة الفنية: ممتازة, جيدة, متوسطة, ضعيفة, ضعيفة جداً
+  isActive    Boolean  @default(false)
+  isDestroyed String?  // مهدم كلياً, مهدم جزئياً, لا يوجد
+  state       String   // جاهز, بانتظار الترميم, قيد الترميم, تم ترميمه, قيد البناء, تم بناؤه
+  friday      Boolean  @default(false)
+  attachments String?  // سدة, قبو, سدة وقبو, لا يوجد
+  imam        String?
+  khatib      String?
+  muezzin     String?
+  khadim      String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  workers     Worker[]
+}
+
+model Worker {
+  id          Int      @id @default(autoincrement())
+  name        String
+  nationalId  String   @unique
+  mosqueId    Int
+  mosque      Mosque   @relation(fields: [mosqueId], references: [id], onDelete: Cascade)
+  role        String
+  education   String
+  evaluation  String   // ممتاز, جيد, وسط, ضعيف, ضعيف جداً, مميز
+  quranMem    String   // إجازة, إجازة بالقراءات العشر, 1-4 جزء, 5-10 جزء, 11-20 جزء, 21-30 جزء
+  salary      Int      @default(0)
+  salaryUSD   Int      @default(0)
+  status      String   // قائم على رأس عمله, استقالة, إجازة, مفصول مؤقت, مفصول نهائي, نقل ضمن المحافظة, نقل خارج المحافظة
+  kafala      String   // كفالة كلية, كفالة جزئية, صندوق المسجد أو الجمعيات, غير مكفول نهائي
+  notes       String?
+  permissions String   @default("") // JSON string: ["التنمية الإدارية", "الحلقات التربوية", "المحاسبة"]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model User {
+  id          Int      @id @default(autoincrement())
+  username    String   @unique
+  password    String
+  role        String   @default("user") // admin, user
+  permissions String   @default("") // JSON string: ["التنمية الإدارية", "الحلقات التربوية", "المحاسبة", "العاملين"]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Reward {
+  id          Int      @id @default(autoincrement())
+  teacherName String
+  region      String
+  mosque      String
+  amountDue   Int      @default(0)
+  amountPaid  Int      @default(0)
+  month       String   // يناير, فبراير, مارس, إلخ
+  year        Int      @default(2024)
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
