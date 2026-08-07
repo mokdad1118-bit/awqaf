@@ -948,7 +948,7 @@ export default function Home() {
                       </button>
                       <button
                         onClick={confirmImport}
-                        disabled={importing || importPreview.errors > 0}
+                        disabled={importing}
                         className="px-6 py-2 rounded-lg bg-primary text-white text-sm font-semibold hover:bg-primary-dark disabled:opacity-50"
                       >
                         {importing ? 'جاري الاستيراد...' : 'تأكيد واستيراد'}
