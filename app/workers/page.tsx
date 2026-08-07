@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import Header from '@/components/Header'
-import { Edit, Trash2, Building, Download, RotateCcw, Plus } from 'lucide-react'
+import { Edit, Trash2, Building, Download, RotateCcw, Plus, Upload } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import type { Worker } from '@/types'
 
@@ -15,6 +15,8 @@ export default function WorkersPage() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
+  const [showImportDialog, setShowImportDialog] = useState(false)
+  const [importing, setImporting] = useState(false)
 
   useEffect(() => {
     fetchWorkers()
@@ -107,6 +109,81 @@ export default function WorkersPage() {
     XLSX.writeFile(wb, 'workers-filtered.xlsx')
   }
 
+  const handleImportExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setImporting(true)
+    try {
+      const data = await file.arrayBuffer()
+      const workbook = XLSX.read(data, { type: 'array' })
+      const sheetName = workbook.SheetNames[0]
+      const worksheet = workbook.Sheets[sheetName]
+      const jsonData = XLSX.utils.sheet_to_json(worksheet) as any[]
+
+      // Fetch mosques to map mosque names to IDs
+      const mosquesRes = await fetch('/api/mosques')
+      const mosquesData = await mosquesRes.json()
+      const mosques = mosquesData.data || mosquesData
+      const mosqueMap = new Map(mosques.map((m: any) => [m.name, m.id]))
+
+      let successCount = 0
+      let errorCount = 0
+
+      for (const row of jsonData) {
+        try {
+          const mosqueName = row['المسجد'] || row['مسجد'] || ''
+          const mosqueId = mosqueMap.get(mosqueName)
+
+          if (!mosqueId) {
+            console.warn(`Mosque not found: ${mosqueName}`)
+            errorCount++
+            continue
+          }
+
+          const workerData = {
+            name: row['الاسم الثلاثي'] || row['الاسم'] || '',
+            nationalId: String(row['الرقم الوطني'] || row['رقم_الوطني'] || ''),
+            mosqueId,
+            role: row['المسمى الوظيفي'] || row['المسمى'] || row['الوظيفة'] || '',
+            education: row['الشهادة'] || row['المؤهل'] || '',
+            evaluation: row['التقييم'] || row['التقدير'] || 'وسط',
+            quranMem: row['الحفظ'] || row['القرآن'] || '',
+            salary: Number(row['الراتب'] || 0),
+            salaryUSD: Number(row['الراتب بالدولار'] || row['راتب_دولار'] || 0),
+            status: row['الوضع'] || row['الحالة'] || 'نشط',
+            kafala: row['الكفالة'] || '',
+            notes: row['ملاحظات'] || '',
+          }
+
+          const res = await fetch('/api/workers', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(workerData),
+          })
+
+          if (res.ok) {
+            successCount++
+          } else {
+            errorCount++
+          }
+        } catch (error) {
+          console.error('Error importing row:', row, error)
+          errorCount++
+        }
+      }
+
+      alert(`تم الاستيراد بنجاح: ${successCount} عامل\nفشل: ${errorCount} عامل`)
+      fetchWorkers()
+      setShowImportDialog(false)
+    } catch (error) {
+      console.error('Error importing Excel:', error)
+      alert('حدث خطأ أثناء استيراد الملف')
+    } finally {
+      setImporting(false)
+    }
+  }
+
   const getRoleColor = (role: string) => {
     if (role.includes('إمام') && role.includes('خطيب')) return 'bg-purple-100 text-purple-700'
     if (role === 'إمام') return 'bg-blue-100 text-blue-700'
@@ -147,6 +224,13 @@ export default function WorkersPage() {
                   <Plus size={16} />
                   إضافة عامل
                 </Link>
+                <button
+                  onClick={() => setShowImportDialog(true)}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700"
+                >
+                  <Upload size={16} />
+                  استيراد Excel
+                </button>
                 <button
                   onClick={exportToExcel}
                   className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700"
@@ -286,6 +370,53 @@ export default function WorkersPage() {
             )}
           </div>
         </div>
+
+        {/* Import Dialog */}
+        {showImportDialog && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-xl">
+              <h3 className="text-lg font-bold text-primary mb-4">استيراد العاملين من Excel</h3>
+              <p className="text-sm text-gray-600 mb-4">
+                يجب أن يحتوي ملف Excel على الأعمدة التالية:
+              </p>
+              <ul className="text-xs text-gray-500 mb-4 space-y-1 list-disc list-inside">
+                <li>الاسم الثلاثي (أو الاسم)</li>
+                <li>الرقم الوطني</li>
+                <li>المسجد (يجب أن يكون موجوداً في النظام)</li>
+                <li>المسمى الوظيفي</li>
+                <li>الشهادة</li>
+                <li>التقييم</li>
+                <li>الحفظ</li>
+                <li>الراتب</li>
+                <li>الراتب بالدولار</li>
+                <li>الوضع</li>
+                <li>الكفالة</li>
+                <li>ملاحظات</li>
+              </ul>
+              <input
+                type="file"
+                accept=".xlsx,.xls"
+                onChange={handleImportExcel}
+                disabled={importing}
+                className="w-full mb-4 text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-primary file:text-white hover:file:bg-primary-dark"
+              />
+              <div className="flex justify-end gap-2">
+                <button
+                  onClick={() => setShowImportDialog(false)}
+                  disabled={importing}
+                  className="px-4 py-2 rounded-lg border border-gray-200 text-gray-600 text-sm hover:bg-gray-50 disabled:opacity-50"
+                >
+                  إلغاء
+                </button>
+              </div>
+              {importing && (
+                <div className="mt-4 text-center text-sm text-gray-500">
+                  جاري الاستيراد...
+                </div>
+              )}
+            </div>
+          </div>
+        )}
     </>
   )
 }
