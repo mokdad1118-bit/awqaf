@@ -512,21 +512,21 @@ export default function Home() {
           })
 
           // Handle boolean fields
-          if (mosqueData.isActive) {
+          if (mosqueData.isActive !== undefined) {
             mosqueData.isActive = mosqueData.isActive === 'نعم' || mosqueData.isActive === 'true' || mosqueData.isActive === true
+          } else {
+            mosqueData.isActive = false
           }
-          if (mosqueData.friday) {
+          if (mosqueData.friday !== undefined) {
             mosqueData.friday = mosqueData.friday === 'نعم' || mosqueData.friday === 'true' || mosqueData.friday === true
+          } else {
+            mosqueData.friday = false
           }
 
           // Handle numeric fields
           if (mosqueData.area) {
             mosqueData.area = Number(mosqueData.area) || null
           }
-
-          // Set defaults for required fields
-          mosqueData.isActive = mosqueData.isActive ?? false
-          mosqueData.friday = mosqueData.friday ?? false
           
           // Ensure all required fields have values with trim
           mosqueData.name = (mosqueData.name || '').trim()
@@ -569,6 +569,8 @@ export default function Home() {
             }
           })
 
+          console.log(`Sending mosque data for row ${item.row}:`, JSON.stringify(cleanMosqueData, null, 2))
+          
           const res = await fetch('/api/mosques', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -623,21 +625,21 @@ export default function Home() {
             })
 
             // Handle boolean fields
-            if (mosqueData.isActive) {
+            if (mosqueData.isActive !== undefined) {
               mosqueData.isActive = mosqueData.isActive === 'نعم' || mosqueData.isActive === 'true' || mosqueData.isActive === true
+            } else {
+              mosqueData.isActive = false
             }
-            if (mosqueData.friday) {
+            if (mosqueData.friday !== undefined) {
               mosqueData.friday = mosqueData.friday === 'نعم' || mosqueData.friday === 'true' || mosqueData.friday === true
+            } else {
+              mosqueData.friday = false
             }
 
             // Handle numeric fields
             if (mosqueData.area) {
               mosqueData.area = Number(mosqueData.area) || null
             }
-
-            // Set defaults for required fields
-            mosqueData.isActive = mosqueData.isActive ?? false
-            mosqueData.friday = mosqueData.friday ?? false
             
             // Ensure all required fields have values with trim
             mosqueData.name = (mosqueData.name || '').trim()
