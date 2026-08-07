@@ -143,7 +143,7 @@ export default function Home() {
 
   // Smart column mapping for mosque import - comprehensive
   const columnMapping = {
-    name: ['اسم المسجد', 'المسجد', 'اسم الجامع', 'الجامع', 'اسم', 'اسم_المسجد'],
+    name: ['اسم المسجد', 'المسجد', 'اسم الجامع', 'الجامع', 'اسم_المسجد'],
     city: ['المدينة', 'القرية', 'المدينة/القرية', 'المحافظة', 'المنطقة', 'المدينة_القرية'],
     location: ['الموقع', 'العنوان', 'المكان', 'المكانة', 'العنوان_الكامل', 'مكانه', 'المكانة'],
     category: ['الفئة', 'التصنيف', 'درجة', 'فئة_المسجد', 'فئته'],
@@ -151,29 +151,46 @@ export default function Home() {
     area: ['المساحة', 'المساحة بالمتر', 'المساحة_بالمتر', 'مساحة', 'مساحته'],
     status: ['الحالة الفنية', 'الحالة', 'الوضع', 'الحالة_الفنية', 'حالته الفنية'],
     isActive: ['التفعيل', 'مفعل', 'نشط', 'فعال', 'حالة_التفعيل', 'مفعل/غير مفعل'],
-    isDestroyed: ['الهدم', 'مهدم', 'حالة الهدم', 'حالة_الهدم'],
-    state: ['الحالة', 'حالة البناء', 'وضع البناء', 'حالة_البناء', 'حالته'],
+    isDestroyed: ['الهدم', 'مهدم', 'حالة الهدم', 'حالة_الهدم', 'نسبة الهدم', 'مهدم كلياً/مهدم جزئياً'],
+    state: ['الحالة', 'حالة البناء', 'وضع البناء', 'حالة_البناء', 'حالته', 'حالة المسجد'],
     friday: ['خطبة الجمعة', 'جمعة', 'صلاة الجمعة', 'خطبة_الجمعة', 'تقام فيه خطبة الجمعة'],
     attachments: ['الملحقات', 'الإنشآت', 'المرافق', 'الملحقات_الإنشائية', 'ملحقات المسجد'],
-    imam: ['الإمام', 'اسم الإمام', 'إمام المسجد', 'اسم_الإمام', 'اسم الإمام الثلاثي'],
+    imam: ['الإمام', 'اسم الإمام', 'إمام المسجد', 'اسم_الإمام', 'اسم الإمام الثلاثي', 'اسم الإمام المعاون'],
     khatib: ['الخطيب', 'اسم الخطيب', 'خطيب الجمعة', 'اسم_الخطيب', 'اسم الخطيب الثلاثي'],
     muezzin: ['المؤذن', 'اسم المؤذن', 'اسم_المؤذن', 'اسم المؤذن الثلاثي'],
     khadim: ['الخادم', 'اسم الخادم', 'الخدم', 'اسم_الخادم', 'اسم الخادم الثلاثي'],
-    directorate: ['المديرية', 'المديرية', 'المديرية/الشعبة'],
-    department: ['الشعبة', 'الشعبة'],
-    office: ['المكتب', 'المكتب'],
+    directorate: ['المديرية'],
+    department: ['الشعبة'],
+    office: ['المكتب'],
   }
 
   const findBestMatch = (header: string): string | null => {
     const normalizedHeader = header.toLowerCase().trim()
+    let bestMatch: string | null = null
+    let bestScore = 0
+    
     for (const [field, variants] of Object.entries(columnMapping)) {
       for (const variant of variants) {
-        if (normalizedHeader.includes(variant.toLowerCase()) || variant.toLowerCase().includes(normalizedHeader)) {
+        const normalizedVariant = variant.toLowerCase().trim()
+        
+        // Exact match gets highest score
+        if (normalizedHeader === normalizedVariant) {
           return field
+        }
+        
+        // Check if header contains variant or vice versa
+        if (normalizedHeader.includes(normalizedVariant) || normalizedVariant.includes(normalizedHeader)) {
+          // Score based on length of match (longer matches are better)
+          const score = Math.min(normalizedHeader.length, normalizedVariant.length)
+          if (score > bestScore) {
+            bestScore = score
+            bestMatch = field
+          }
         }
       }
     }
-    return null
+    
+    return bestMatch
   }
 
   // Extract worker data from mosque row
