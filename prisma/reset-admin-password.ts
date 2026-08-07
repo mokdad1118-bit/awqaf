@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client'
+import { hashPassword } from '../lib/crypto'
 
 const prisma = new PrismaClient()
 
@@ -11,6 +12,10 @@ async function resetAdminPassword() {
   console.log(`New password: ${newPassword}`)
 
   try {
+    // Hash the password
+    const hashedPassword = hashPassword(newPassword)
+    console.log('✅ Password hashed successfully')
+
     // Check if admin user exists
     const existingAdmin = await prisma.user.findUnique({
       where: { username }
@@ -23,7 +28,7 @@ async function resetAdminPassword() {
       const newAdmin = await prisma.user.create({
         data: {
           username,
-          password: newPassword,
+          password: hashedPassword,
           role: 'admin',
           permissions: JSON.stringify(['التنمية الإدارية', 'الحلقات التربوية', 'المحاسبة', 'العاملين']),
         }
@@ -41,7 +46,7 @@ async function resetAdminPassword() {
       const updatedAdmin = await prisma.user.update({
         where: { username },
         data: {
-          password: newPassword,
+          password: hashedPassword,
           permissions: JSON.stringify(['التنمية الإدارية', 'الحلقات التربوية', 'المحاسبة', 'العاملين']),
         }
       })

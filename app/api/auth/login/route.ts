@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { verifyPassword } from '@/lib/crypto'
 
 export async function POST(request: Request) {
   try {
@@ -9,7 +10,7 @@ export async function POST(request: Request) {
       where: { username },
     })
 
-    if (!user || user.password !== password) {
+    if (!user || !verifyPassword(password, user.password)) {
       return NextResponse.json({ error: 'اسم المستخدم أو كلمة المرور غير صحيحة' }, { status: 401 })
     }
 
@@ -18,6 +19,7 @@ export async function POST(request: Request) {
         id: user.id,
         username: user.username,
         role: user.role,
+        permissions: user.permissions,
       },
     })
   } catch (error) {
