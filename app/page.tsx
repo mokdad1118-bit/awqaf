@@ -457,14 +457,17 @@ export default function Home() {
 
         if (!mosqueName || mosqueName.length === 0) {
           errors.push({ row: index + 1, error: 'اسم المسجد مطلوب' })
+          console.log(`Row ${index + 1} rejected: Missing mosque name`)
           return
         }
 
         const duplicate = existingMosques.find(m => m.name === mosqueName)
         if (duplicate) {
           duplicates.push({ row: index + 1, mosque: mosqueName, existingId: duplicate.id })
+          console.log(`Row ${index + 1} marked as duplicate: ${mosqueName}`)
         } else {
           newMosques.push({ row: index + 1, data: row })
+          console.log(`Row ${index + 1} marked as new: ${mosqueName}`)
         }
       })
 
@@ -601,6 +604,7 @@ export default function Home() {
           }
         } catch (error) {
           console.error('Error importing row:', item.row, error)
+          console.error('Row data:', item.data)
           errorCount++
         }
       }
@@ -693,7 +697,20 @@ export default function Home() {
         }
       }
 
-      alert(`تم الاستيراد بنجاح:\nجديد: ${successCount}\nخطأ: ${errorCount}`)
+      // Build detailed summary
+      let summary = `تم الاستيراد بنجاح:\n\n`
+      summary += `✅ تمت إضافة: ${successCount} مسجد\n`
+      summary += `⚠️ مكرر: ${importPreview.duplicates} مسجد (تم ${duplicateAction === 'skip' ? 'تخطيها' : duplicateAction === 'update' ? 'تحديثها' : 'إضافتها كجديدة'})\n`
+      summary += `❌ فشل: ${errorCount} مسجد\n`
+      
+      if (errorCount > 0) {
+        summary += `\nتفاصيل الأخطاء:\n`
+        summary += `- المساجد بدون اسم مطلوب\n`
+        summary += `- المساجد مع بيانات غير صالحة\n`
+        summary += `- تحقق من console للمزيد من التفاصيل`
+      }
+      
+      alert(summary)
       setImportPreview(null)
       setShowImportDialog(false)
       fetchMosques()
