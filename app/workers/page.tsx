@@ -131,18 +131,23 @@ export default function WorkersPage() {
       const mosquesRes = await fetch('/api/mosques')
       const mosquesData = await mosquesRes.json()
       const mosques = mosquesData.data || mosquesData
-      const mosqueMap = new Map(mosques.map((m: any) => [m.name, m.id]))
+      
+      // Create normalized mosque map (trim whitespace)
+      const mosqueMap = new Map()
+      mosques.forEach((m: any) => {
+        mosqueMap.set(m.name.trim(), m.id)
+      })
 
       let successCount = 0
       let errorCount = 0
 
       for (const row of jsonData) {
         try {
-          const mosqueName = row['المسجد'] || row['مسجد'] || ''
+          const mosqueName = (row['اسم المسجد'] || row['المسجد'] || row['مسجد'] || row['الجامع'] || '').trim()
           const mosqueId = mosqueMap.get(mosqueName)
 
           if (!mosqueId) {
-            console.warn(`Mosque not found: ${mosqueName}`)
+            console.warn(`Mosque not found: "${mosqueName}"`)
             errorCount++
             continue
           }
