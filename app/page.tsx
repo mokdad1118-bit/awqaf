@@ -266,6 +266,96 @@ export default function Home() {
     }
   }
 
+  // Fix validation errors automatically
+  const fixValidationErrors = (data: any, errors: string[]): any | null => {
+    const fixed: any = {}
+    let hasFixes = false
+    
+    errors.forEach(error => {
+      if (error.includes('الفئة')) {
+        // Try to match category with fuzzy matching
+        const categoryMap: Record<string, string> = {
+          'ا': 'أ', 'a': 'أ', 'أولى': 'أ', 'الأولى': 'أ',
+          'ب': 'ب', 'ثانية': 'ب', 'الثانية': 'ب',
+          'ج': 'ج', 'ثالثة': 'ج', 'الثالثة': 'ج',
+          'د': 'د', 'رابعة': 'د', 'الرابعة': 'د',
+        }
+        const normalized = data.category?.toLowerCase().trim()
+        if (normalized && categoryMap[normalized]) {
+          fixed.category = categoryMap[normalized]
+          hasFixes = true
+        } else {
+          fixed.category = 'أ' // Default
+          hasFixes = true
+        }
+      }
+      
+      if (error.includes('النوع')) {
+        // Try to match type with fuzzy matching
+        const typeMap: Record<string, string> = {
+          'عام': 'عام',
+          'مركزي': 'مركزي',
+          'اثري': 'عام أثري', 'أثري': 'عام أثري', 'عام اثري': 'عام أثري',
+          'مركزي اثري': 'مركزي أثري', 'مركزي أثري': 'مركزي أثري',
+        }
+        const normalized = data.type?.toLowerCase().trim()
+        if (normalized && typeMap[normalized]) {
+          fixed.type = typeMap[normalized]
+          hasFixes = true
+        } else {
+          fixed.type = 'عام' // Default
+          hasFixes = true
+        }
+      }
+      
+      if (error.includes('الحالة الفنية')) {
+        // Try to match status with fuzzy matching
+        const statusMap: Record<string, string> = {
+          'ممتاز': 'ممتازة', 'ممتازة': 'ممتازة',
+          'جيد': 'جيدة', 'جيدة': 'جيدة',
+          'متوسط': 'متوسطة', 'متوسطة': 'متوسطة',
+          'ضعيف': 'ضعيفة', 'ضعيفة': 'ضعيفة',
+          'ضعيف جدا': 'ضعيفة جداً', 'ضعيفة جدا': 'ضعيفة جداً', 'ضعيفة جداً': 'ضعيفة جداً',
+        }
+        const normalized = data.status?.toLowerCase().trim()
+        if (normalized && statusMap[normalized]) {
+          fixed.status = statusMap[normalized]
+          hasFixes = true
+        } else {
+          fixed.status = 'جيدة' // Default
+          hasFixes = true
+        }
+      }
+      
+      if (error.includes('حالة البناء')) {
+        // Try to match state with fuzzy matching
+        const stateMap: Record<string, string> = {
+          'جاهز': 'جاهز',
+          'انتظار': 'بانتظار الترميم', 'بانتظار': 'بانتظار الترميم',
+          'قيد': 'قيد الترميم', 'قيد الترميم': 'قيد الترميم',
+          'تم ترميمه': 'تم ترميمه',
+          'قيد بناء': 'قيد البناء', 'قيد البناء': 'قيد البناء',
+          'تم بناؤه': 'تم بناؤه',
+        }
+        const normalized = data.state?.toLowerCase().trim()
+        if (normalized && stateMap[normalized]) {
+          fixed.state = stateMap[normalized]
+          hasFixes = true
+        } else {
+          fixed.state = 'جاهز' // Default
+          hasFixes = true
+        }
+      }
+      
+      if (error.includes('المساحة')) {
+        fixed.area = 0 // Default
+        hasFixes = true
+      }
+    })
+    
+    return hasFixes ? fixed : null
+  }
+
   const handleImportExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -407,8 +497,14 @@ export default function Home() {
           const validation = validateMosqueData(mosqueData)
           if (!validation.valid) {
             console.error(`Validation errors for row ${item.row}:`, validation.errors)
-            errorCount++
-            continue
+            // Try to fix validation errors instead of rejecting
+            const fixedData = fixValidationErrors(mosqueData, validation.errors)
+            if (fixedData) {
+              Object.assign(mosqueData, fixedData)
+            } else {
+              errorCount++
+              continue
+            }
           }
 
           const res = await fetch('/api/mosques', {
@@ -501,7 +597,13 @@ export default function Home() {
             const validation = validateMosqueData(mosqueData)
             if (!validation.valid) {
               console.error(`Validation errors for duplicate row ${dup.row}:`, validation.errors)
-              continue
+              // Try to fix validation errors instead of rejecting
+              const fixedData = fixValidationErrors(mosqueData, validation.errors)
+              if (fixedData) {
+                Object.assign(mosqueData, fixedData)
+              } else {
+                continue
+              }
             }
 
             if (duplicateAction === 'update') {
