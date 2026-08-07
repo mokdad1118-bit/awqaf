@@ -145,20 +145,23 @@ export default function Home() {
   const columnMapping = {
     name: ['اسم المسجد', 'المسجد', 'اسم الجامع', 'الجامع', 'اسم', 'اسم_المسجد'],
     city: ['المدينة', 'القرية', 'المدينة/القرية', 'المحافظة', 'المنطقة', 'المدينة_القرية'],
-    location: ['الموقع', 'العنوان', 'المكان', 'المكانة', 'العنوان_الكامل'],
-    category: ['الفئة', 'التصنيف', 'درجة', 'فئة_المسجد'],
-    type: ['النوع', 'نوع المسجد', 'تصنيف المسجد', 'نوع_المسجد'],
-    area: ['المساحة', 'المساحة بالمتر', 'المساحة_بالمتر', 'مساحة'],
-    status: ['الحالة الفنية', 'الحالة', 'الوضع', 'الحالة_الفنية'],
-    isActive: ['التفعيل', 'مفعل', 'نشط', 'فعال', 'حالة_التفعيل'],
+    location: ['الموقع', 'العنوان', 'المكان', 'المكانة', 'العنوان_الكامل', 'مكانه', 'المكانة'],
+    category: ['الفئة', 'التصنيف', 'درجة', 'فئة_المسجد', 'فئته'],
+    type: ['النوع', 'نوع المسجد', 'تصنيف المسجد', 'نوع_المسجد', 'نوعه'],
+    area: ['المساحة', 'المساحة بالمتر', 'المساحة_بالمتر', 'مساحة', 'مساحته'],
+    status: ['الحالة الفنية', 'الحالة', 'الوضع', 'الحالة_الفنية', 'حالته الفنية'],
+    isActive: ['التفعيل', 'مفعل', 'نشط', 'فعال', 'حالة_التفعيل', 'مفعل/غير مفعل'],
     isDestroyed: ['الهدم', 'مهدم', 'حالة الهدم', 'حالة_الهدم'],
-    state: ['الحالة', 'حالة البناء', 'وضع البناء', 'حالة_البناء'],
-    friday: ['خطبة الجمعة', 'جمعة', 'صلاة الجمعة', 'خطبة_الجمعة'],
-    attachments: ['الملحقات', 'الإنشآت', 'المرافق', 'الملحقات_الإنشائية'],
-    imam: ['الإمام', 'اسم الإمام', 'إمام المسجد', 'اسم_الإمام'],
-    khatib: ['الخطيب', 'اسم الخطيب', 'خطيب الجمعة', 'اسم_الخطيب'],
-    muezzin: ['المؤذن', 'اسم المؤذن', 'اسم_المؤذن'],
-    khadim: ['الخادم', 'اسم الخادم', 'الخدم', 'اسم_الخادم'],
+    state: ['الحالة', 'حالة البناء', 'وضع البناء', 'حالة_البناء', 'حالته'],
+    friday: ['خطبة الجمعة', 'جمعة', 'صلاة الجمعة', 'خطبة_الجمعة', 'تقام فيه خطبة الجمعة'],
+    attachments: ['الملحقات', 'الإنشآت', 'المرافق', 'الملحقات_الإنشائية', 'ملحقات المسجد'],
+    imam: ['الإمام', 'اسم الإمام', 'إمام المسجد', 'اسم_الإمام', 'اسم الإمام الثلاثي'],
+    khatib: ['الخطيب', 'اسم الخطيب', 'خطيب الجمعة', 'اسم_الخطيب', 'اسم الخطيب الثلاثي'],
+    muezzin: ['المؤذن', 'اسم المؤذن', 'اسم_المؤذن', 'اسم المؤذن الثلاثي'],
+    khadim: ['الخادم', 'اسم الخادم', 'الخدم', 'اسم_الخادم', 'اسم الخادم الثلاثي'],
+    directorate: ['المديرية', 'المديرية', 'المديرية/الشعبة'],
+    department: ['الشعبة', 'الشعبة'],
+    office: ['المكتب', 'المكتب'],
   }
 
   const findBestMatch = (header: string): string | null => {
@@ -366,7 +369,36 @@ export default function Home() {
       const workbook = XLSX.read(data, { type: 'array' })
       const sheetName = workbook.SheetNames[0]
       const worksheet = workbook.Sheets[sheetName]
-      const jsonData = XLSX.utils.sheet_to_json(worksheet) as any[]
+      
+      // Get range to handle merged cells properly
+      const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1')
+      const jsonData: any[] = []
+      
+      // Read each row manually to handle merged cells
+      for (let row = range.s.r; row <= range.e.r; row++) {
+        const rowData: any = {}
+        for (let col = range.s.c; col <= range.e.c; col++) {
+          const cellAddress = XLSX.utils.encode_cell({ r: row, c: col })
+          const cell = worksheet[cellAddress]
+          const headerRow = 0 // Assuming headers are in first row
+          const headerAddress = XLSX.utils.encode_cell({ r: headerRow, c: col })
+          const headerCell = worksheet[headerAddress]
+          
+          if (headerCell && headerCell.v) {
+            const header = String(headerCell.v).trim()
+            const value = cell ? (cell.v || '') : ''
+            rowData[header] = value
+          }
+        }
+        if (Object.keys(rowData).length > 0) {
+          jsonData.push(rowData)
+        }
+      }
+      
+      // Remove header row from data
+      if (jsonData.length > 0) {
+        jsonData.shift()
+      }
 
       if (jsonData.length === 0) {
         alert('الملف فارغ')
@@ -374,8 +406,8 @@ export default function Home() {
         return
       }
 
-      // Get headers from first row
-      const headers = Object.keys(jsonData[0])
+      // Get headers from first data row
+      const headers = Object.keys(jsonData[0] || {})
       
       // Map columns
       const mappedColumns: any = {}
