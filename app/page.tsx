@@ -545,11 +545,12 @@ export default function Home() {
           // Validate mosque data
           const validation = validateMosqueData(mosqueData)
           if (!validation.valid) {
-            console.error(`Validation errors for row ${item.row}:`, validation.errors)
+            console.error(`Validation errors for row ${item.row}:`, validation.errors.join(', '))
             // Try to fix validation errors instead of rejecting
             const fixedData = fixValidationErrors(mosqueData, validation.errors)
             if (fixedData) {
               Object.assign(mosqueData, fixedData)
+              console.log(`Fixed validation errors for row ${item.row}`)
             } else {
               errorCount++
               continue

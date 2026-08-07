@@ -50,9 +50,11 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const data = await request.json()
+    console.log('Creating mosque with data:', JSON.stringify(data, null, 2))
     const mosque = await prisma.mosque.create({ data })
     return NextResponse.json(mosque, { status: 201 })
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to create mosque' }, { status: 500 })
+    console.error('Error creating mosque:', error)
+    return NextResponse.json({ error: 'Failed to create mosque', details: String(error) }, { status: 500 })
   }
 }
