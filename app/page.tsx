@@ -557,10 +557,19 @@ export default function Home() {
             }
           }
 
+          // Remove fields that don't exist in Mosque schema (they belong to Worker)
+          const validMosqueFields = ['name', 'city', 'location', 'category', 'type', 'area', 'status', 'isActive', 'isDestroyed', 'state', 'friday', 'attachments', 'imam', 'khatib', 'muezzin', 'khadim']
+          const cleanMosqueData: any = {}
+          validMosqueFields.forEach(field => {
+            if (mosqueData[field] !== undefined) {
+              cleanMosqueData[field] = mosqueData[field]
+            }
+          })
+
           const res = await fetch('/api/mosques', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(mosqueData),
+            body: JSON.stringify(cleanMosqueData),
           })
 
           if (res.ok) {
@@ -656,17 +665,26 @@ export default function Home() {
               }
             }
 
+            // Remove fields that don't exist in Mosque schema
+            const validMosqueFields = ['name', 'city', 'location', 'category', 'type', 'area', 'status', 'isActive', 'isDestroyed', 'state', 'friday', 'attachments', 'imam', 'khatib', 'muezzin', 'khadim']
+            const cleanMosqueData: any = {}
+            validMosqueFields.forEach(field => {
+              if (mosqueData[field] !== undefined) {
+                cleanMosqueData[field] = mosqueData[field]
+              }
+            })
+
             if (duplicateAction === 'update') {
               await fetch(`/api/mosques/${dup.existingId}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(mosqueData),
+                body: JSON.stringify(cleanMosqueData),
               })
             } else if (duplicateAction === 'create') {
               await fetch('/api/mosques', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(mosqueData),
+                body: JSON.stringify(cleanMosqueData),
               })
             }
           } catch (error) {
