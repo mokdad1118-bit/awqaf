@@ -527,6 +527,17 @@ export default function Home() {
           if (mosqueData.area) {
             mosqueData.area = Number(mosqueData.area) || null
           }
+          if (mosqueData.area === '' || mosqueData.area === undefined) {
+            mosqueData.area = null
+          }
+          
+          // Convert empty strings to null for optional string fields
+          if (mosqueData.isDestroyed === '') mosqueData.isDestroyed = null
+          if (mosqueData.attachments === '') mosqueData.attachments = null
+          if (mosqueData.imam === '') mosqueData.imam = null
+          if (mosqueData.khatib === '') mosqueData.khatib = null
+          if (mosqueData.muezzin === '') mosqueData.muezzin = null
+          if (mosqueData.khadim === '') mosqueData.khadim = null
           
           // Ensure all required fields have values with trim
           mosqueData.name = (mosqueData.name || '').trim()
@@ -640,6 +651,17 @@ export default function Home() {
             if (mosqueData.area) {
               mosqueData.area = Number(mosqueData.area) || null
             }
+            if (mosqueData.area === '' || mosqueData.area === undefined) {
+              mosqueData.area = null
+            }
+            
+            // Convert empty strings to null for optional string fields
+            if (mosqueData.isDestroyed === '') mosqueData.isDestroyed = null
+            if (mosqueData.attachments === '') mosqueData.attachments = null
+            if (mosqueData.imam === '') mosqueData.imam = null
+            if (mosqueData.khatib === '') mosqueData.khatib = null
+            if (mosqueData.muezzin === '') mosqueData.muezzin = null
+            if (mosqueData.khadim === '') mosqueData.khadim = null
             
             // Ensure all required fields have values with trim
             mosqueData.name = (mosqueData.name || '').trim()
