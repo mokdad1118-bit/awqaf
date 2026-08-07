@@ -94,7 +94,9 @@ export default memo(function Sidebar({ mobileMenuOpen, setMobileMenuOpen }: { mo
       className={cn(
         "fixed right-0 top-0 h-screen bg-primary/90 backdrop-blur-sm border-l border-primary/95 text-primary-dark transition-all duration-300 z-50 flex flex-col",
         collapsed ? "w-20" : "w-64",
-        mobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+        // On mobile: hidden by default (translate-x-full), shown when open (translate-x-0)
+        // On desktop (lg): always visible (translate-x-0)
+        mobileMenuOpen ? "translate-x-0" : "translate-x-full lg:translate-x-0"
       )}
     >
       <div className="p-4 border-b border-white/10">
