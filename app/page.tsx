@@ -20,6 +20,7 @@ export default function Home() {
   const [importPreview, setImportPreview] = useState<any>(null)
   const [importing, setImporting] = useState(false)
   const [duplicateAction, setDuplicateAction] = useState<'skip' | 'update' | 'create'>('skip')
+  const [deletingAll, setDeletingAll] = useState(false)
 
   const fetchMosques = useCallback(async () => {
     try {
@@ -85,6 +86,27 @@ export default function Home() {
     }
   }, [fetchMosques])
 
+  const handleDeleteAll = async () => {
+    if (!confirm('هل أنت متأكد من حذف جميع المساجد والعاملين؟ هذا الإجراء لا يمكن التراجع عنه!')) return
+    if (!confirm('تأكيد نهائي: سيتم حذف جميع البيانات!')) return
+    
+    setDeletingAll(true)
+    try {
+      const res = await fetch('/api/mosques/delete-all', { method: 'DELETE' })
+      if (res.ok) {
+        alert('تم حذف جميع المساجد بنجاح')
+        fetchMosques()
+      } else {
+        alert('حدث خطأ أثناء الحذف')
+      }
+    } catch (error) {
+      console.error('Error:', error)
+      alert('حدث خطأ أثناء الحذف')
+    } finally {
+      setDeletingAll(false)
+    }
+  }
+
   const resetFilters = useCallback(() => {
     setSearchQuery('')
     setActiveFilter('all')
@@ -119,24 +141,24 @@ export default function Home() {
     XLSX.writeFile(wb, 'mosques-filtered.xlsx')
   }, [filteredMosques])
 
-  // Smart column mapping for mosque import
+  // Smart column mapping for mosque import - comprehensive
   const columnMapping = {
-    name: ['اسم المسجد', 'المسجد', 'اسم الجامع', 'الجامع', 'اسم'],
-    city: ['المدينة', 'القرية', 'المدينة/القرية', 'المحافظة', 'المنطقة'],
-    location: ['الموقع', 'العنوان', 'المكان', 'المكانة'],
-    category: ['الفئة', 'التصنيف', 'درجة'],
-    type: ['النوع', 'نوع المسجد', 'تصنيف المسجد'],
-    area: ['المساحة', 'المساحة بالمتر'],
-    status: ['الحالة الفنية', 'الحالة', 'الوضع'],
-    isActive: ['التفعيل', 'مفعل', 'نشط', 'فعال'],
-    isDestroyed: ['الهدم', 'مهدم', 'حالة الهدم'],
-    state: ['الحالة', 'حالة البناء', 'وضع البناء'],
-    friday: ['خطبة الجمعة', 'جمعة', 'صلاة الجمعة'],
-    attachments: ['الملحقات', 'الإنشآت', 'المرافق'],
-    imam: ['الإمام', 'اسم الإمام', 'إمام المسجد'],
-    khatib: ['الخطيب', 'اسم الخطيب', 'خطيب الجمعة'],
-    muezzin: ['المؤذن', 'اسم المؤذن'],
-    khadim: ['الخادم', 'اسم الخادم', 'الخدم'],
+    name: ['اسم المسجد', 'المسجد', 'اسم الجامع', 'الجامع', 'اسم', 'اسم_المسجد'],
+    city: ['المدينة', 'القرية', 'المدينة/القرية', 'المحافظة', 'المنطقة', 'المدينة_القرية'],
+    location: ['الموقع', 'العنوان', 'المكان', 'المكانة', 'العنوان_الكامل'],
+    category: ['الفئة', 'التصنيف', 'درجة', 'فئة_المسجد'],
+    type: ['النوع', 'نوع المسجد', 'تصنيف المسجد', 'نوع_المسجد'],
+    area: ['المساحة', 'المساحة بالمتر', 'المساحة_بالمتر', 'مساحة'],
+    status: ['الحالة الفنية', 'الحالة', 'الوضع', 'الحالة_الفنية'],
+    isActive: ['التفعيل', 'مفعل', 'نشط', 'فعال', 'حالة_التفعيل'],
+    isDestroyed: ['الهدم', 'مهدم', 'حالة الهدم', 'حالة_الهدم'],
+    state: ['الحالة', 'حالة البناء', 'وضع البناء', 'حالة_البناء'],
+    friday: ['خطبة الجمعة', 'جمعة', 'صلاة الجمعة', 'خطبة_الجمعة'],
+    attachments: ['الملحقات', 'الإنشآت', 'المرافق', 'الملحقات_الإنشائية'],
+    imam: ['الإمام', 'اسم الإمام', 'إمام المسجد', 'اسم_الإمام'],
+    khatib: ['الخطيب', 'اسم الخطيب', 'خطيب الجمعة', 'اسم_الخطيب'],
+    muezzin: ['المؤذن', 'اسم المؤذن', 'اسم_المؤذن'],
+    khadim: ['الخادم', 'اسم الخادم', 'الخدم', 'اسم_الخادم'],
   }
 
   const findBestMatch = (header: string): string | null => {
@@ -149,6 +171,99 @@ export default function Home() {
       }
     }
     return null
+  }
+
+  // Extract worker data from mosque row
+  const extractWorkerData = (row: any, mosqueId: number): any[] => {
+    const workers: any[] = []
+    
+    // Check for worker columns in various formats
+    const workerFields = [
+      { name: 'إمام', role: 'إمام', key: 'imam' },
+      { name: 'خطيب', role: 'خطيب', key: 'khatib' },
+      { name: 'مؤذن', role: 'مؤذن', key: 'muezzin' },
+      { name: 'خادم', role: 'خادم', key: 'khadim' },
+    ]
+    
+    workerFields.forEach(field => {
+      const workerName = row[field.name] || row[field.key] || ''
+      if (workerName && typeof workerName === 'string' && workerName.trim()) {
+        const nationalId = String(row['الرقم الوطني ' + field.name] || row['رقم_وطني_' + field.key] || '').trim()
+        
+        // Validate national ID format (basic validation)
+        if (nationalId && nationalId.length < 5) {
+          console.warn(`Invalid national ID for ${field.name}: ${nationalId}`)
+        }
+        
+        workers.push({
+          name: workerName.trim(),
+          nationalId: nationalId || '000000000000', // Fallback if missing
+          mosqueId,
+          role: field.role,
+          education: (row['الشهادة ' + field.name] || row['شهادة_' + field.key] || '').trim(),
+          evaluation: (row['التقييم ' + field.name] || row['تقييم_' + field.key] || 'وسط').trim(),
+          quranMem: (row['الحفظ ' + field.name] || row['حفظ_' + field.key] || '').trim(),
+          salary: Number(row['الراتب ' + field.name] || row['راتب_' + field.key] || 0),
+          salaryUSD: Number(row['الراتب بالدولار ' + field.name] || row['راتب_دولار_' + field.key] || 0),
+          status: (row['الوضع ' + field.name] || row['وضع_' + field.key] || 'قائم على رأس عمله').trim(),
+          kafala: (row['الكفالة ' + field.name] || row['كفالة_' + field.key] || '').trim(),
+          notes: (row['ملاحظات ' + field.name] || row['ملاحظات_' + field.key] || '').trim(),
+          directorate: (row['المديرية ' + field.name] || row['مديرية_' + field.key] || '').trim(),
+          department: (row['الشعبة ' + field.name] || row['شعبة_' + field.key] || '').trim(),
+          office: (row['المكتب ' + field.name] || row['مكتب_' + field.key] || '').trim(),
+          location: (row['المكان ' + field.name] || row['مكان_' + field.key] || '').trim(),
+          shamCashAccount: (row['حساب شام كاش ' + field.name] || row['حساب_شام_كاش_' + field.key] || '').trim(),
+        })
+      }
+    })
+    
+    return workers
+  }
+
+  // Validate mosque data
+  const validateMosqueData = (data: any): { valid: boolean; errors: string[] } => {
+    const errors: string[] = []
+    
+    if (!data.name || data.name.trim().length === 0) {
+      errors.push('اسم المسجد مطلوب')
+    }
+    
+    if (!data.city || data.city.trim().length === 0) {
+      errors.push('المدينة مطلوبة')
+    }
+    
+    if (!data.location || data.location.trim().length === 0) {
+      errors.push('الموقع مطلوب')
+    }
+    
+    const validCategories = ['أ', 'ب', 'ج', 'د']
+    if (!validCategories.includes(data.category)) {
+      errors.push(`الفئة يجب أن تكون واحدة من: ${validCategories.join(', ')}`)
+    }
+    
+    const validTypes = ['عام', 'مركزي', 'عام أثري', 'مركزي أثري']
+    if (!validTypes.includes(data.type)) {
+      errors.push(`النوع يجب أن يكون واحداً من: ${validTypes.join(', ')}`)
+    }
+    
+    const validStatuses = ['ممتازة', 'جيدة', 'متوسطة', 'ضعيفة', 'ضعيفة جداً']
+    if (!validStatuses.includes(data.status)) {
+      errors.push(`الحالة الفنية يجب أن تكون واحدة من: ${validStatuses.join(', ')}`)
+    }
+    
+    const validStates = ['جاهز', 'بانتظار الترميم', 'قيد الترميم', 'تم ترميمه', 'قيد البناء', 'تم بناؤه']
+    if (!validStates.includes(data.state)) {
+      errors.push(`حالة البناء يجب أن تكون واحدة من: ${validStates.join(', ')}`)
+    }
+    
+    if (data.area && (isNaN(data.area) || data.area < 0)) {
+      errors.push('المساحة يجب أن تكون رقماً موجباً')
+    }
+    
+    return {
+      valid: errors.length === 0,
+      errors
+    }
   }
 
   const handleImportExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -271,14 +386,30 @@ export default function Home() {
           mosqueData.isActive = mosqueData.isActive ?? false
           mosqueData.friday = mosqueData.friday ?? false
           
-          // Ensure all required fields have values
-          mosqueData.name = mosqueData.name || ''
-          mosqueData.city = mosqueData.city || ''
-          mosqueData.location = mosqueData.location || ''
-          mosqueData.category = mosqueData.category || 'أ'
-          mosqueData.type = mosqueData.type || 'عام'
-          mosqueData.status = mosqueData.status || 'جيدة'
-          mosqueData.state = mosqueData.state || 'جاهز'
+          // Ensure all required fields have values with trim
+          mosqueData.name = (mosqueData.name || '').trim()
+          mosqueData.city = (mosqueData.city || '').trim()
+          mosqueData.location = (mosqueData.location || '').trim()
+          mosqueData.category = (mosqueData.category || 'أ').trim()
+          mosqueData.type = (mosqueData.type || 'عام').trim()
+          mosqueData.status = (mosqueData.status || 'جيدة').trim()
+          mosqueData.state = (mosqueData.state || 'جاهز').trim()
+          
+          // Trim all string fields
+          if (mosqueData.imam) mosqueData.imam = mosqueData.imam.trim()
+          if (mosqueData.khatib) mosqueData.khatib = mosqueData.khatib.trim()
+          if (mosqueData.muezzin) mosqueData.muezzin = mosqueData.muezzin.trim()
+          if (mosqueData.khadim) mosqueData.khadim = mosqueData.khadim.trim()
+          if (mosqueData.attachments) mosqueData.attachments = mosqueData.attachments.trim()
+          if (mosqueData.isDestroyed) mosqueData.isDestroyed = mosqueData.isDestroyed.trim()
+
+          // Validate mosque data
+          const validation = validateMosqueData(mosqueData)
+          if (!validation.valid) {
+            console.error(`Validation errors for row ${item.row}:`, validation.errors)
+            errorCount++
+            continue
+          }
 
           const res = await fetch('/api/mosques', {
             method: 'POST',
@@ -287,7 +418,29 @@ export default function Home() {
           })
 
           if (res.ok) {
+            const createdMosque = await res.json()
             successCount++
+            
+            // Import workers for this mosque if worker data exists
+            const workerData = extractWorkerData(row, createdMosque.id)
+            if (workerData && workerData.length > 0) {
+              for (const worker of workerData) {
+                try {
+                  const workerRes = await fetch('/api/workers', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(worker),
+                  })
+                  if (workerRes.ok) {
+                    console.log('Worker imported successfully')
+                  } else {
+                    console.error('Failed to import worker:', worker)
+                  }
+                } catch (error) {
+                  console.error('Error importing worker:', error)
+                }
+              }
+            }
           } else {
             errorCount++
           }
@@ -327,14 +480,29 @@ export default function Home() {
             mosqueData.isActive = mosqueData.isActive ?? false
             mosqueData.friday = mosqueData.friday ?? false
             
-            // Ensure all required fields have values
-            mosqueData.name = mosqueData.name || ''
-            mosqueData.city = mosqueData.city || ''
-            mosqueData.location = mosqueData.location || ''
-            mosqueData.category = mosqueData.category || 'أ'
-            mosqueData.type = mosqueData.type || 'عام'
-            mosqueData.status = mosqueData.status || 'جيدة'
-            mosqueData.state = mosqueData.state || 'جاهز'
+            // Ensure all required fields have values with trim
+            mosqueData.name = (mosqueData.name || '').trim()
+            mosqueData.city = (mosqueData.city || '').trim()
+            mosqueData.location = (mosqueData.location || '').trim()
+            mosqueData.category = (mosqueData.category || 'أ').trim()
+            mosqueData.type = (mosqueData.type || 'عام').trim()
+            mosqueData.status = (mosqueData.status || 'جيدة').trim()
+            mosqueData.state = (mosqueData.state || 'جاهز').trim()
+            
+            // Trim all string fields
+            if (mosqueData.imam) mosqueData.imam = mosqueData.imam.trim()
+            if (mosqueData.khatib) mosqueData.khatib = mosqueData.khatib.trim()
+            if (mosqueData.muezzin) mosqueData.muezzin = mosqueData.muezzin.trim()
+            if (mosqueData.khadim) mosqueData.khadim = mosqueData.khadim.trim()
+            if (mosqueData.attachments) mosqueData.attachments = mosqueData.attachments.trim()
+            if (mosqueData.isDestroyed) mosqueData.isDestroyed = mosqueData.isDestroyed.trim()
+
+            // Validate mosque data
+            const validation = validateMosqueData(mosqueData)
+            if (!validation.valid) {
+              console.error(`Validation errors for duplicate row ${dup.row}:`, validation.errors)
+              continue
+            }
 
             if (duplicateAction === 'update') {
               await fetch(`/api/mosques/${dup.existingId}`, {
@@ -426,6 +594,13 @@ export default function Home() {
                 >
                   <Download size={16} />
                   تصدير Excel
+                </button>
+                <button
+                  onClick={handleDeleteAll}
+                  disabled={deletingAll}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {deletingAll ? 'جاري الحذف...' : 'حذف الكل'}
                 </button>
                 <button
                   onClick={resetFilters}
