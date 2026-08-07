@@ -326,6 +326,7 @@ export default function WorkersPage() {
                       <th className="px-4 py-3 text-right text-sm font-bold">الرقم الوطني</th>
                       <th className="px-4 py-3 text-right text-sm font-bold">المديرية</th>
                       <th className="px-4 py-3 text-right text-sm font-bold">الشعبة</th>
+                      <th className="px-4 py-3 text-right text-sm font-bold">المكتب</th>
                       <th className="px-4 py-3 text-right text-sm font-bold">المسجد</th>
                       <th className="px-4 py-3 text-right text-sm font-bold">المسمى الوظيفي</th>
                       <th className="px-4 py-3 text-right text-sm font-bold">الشهادة</th>
@@ -343,6 +344,7 @@ export default function WorkersPage() {
                         <td className="px-4 py-3 text-sm text-gray-600">{worker.nationalId}</td>
                         <td className="px-4 py-3 text-sm text-gray-600">{worker.directorate || '-'}</td>
                         <td className="px-4 py-3 text-sm text-gray-600">{worker.department || '-'}</td>
+                        <td className="px-4 py-3 text-sm text-gray-600">{worker.office || '-'}</td>
                         <td className="px-4 py-3 text-sm">
                           <Link href={`/mosques/${worker.mosqueId}`} className="flex items-center gap-1 text-primary hover:underline">
                             <Building size={12} />
