@@ -152,7 +152,7 @@ export default function Home() {
     status: ['الحالة الفنية', 'الحالة', 'الوضع', 'الحالة_الفنية', 'حالته الفنية'],
     isActive: ['التفعيل', 'مفعل', 'نشط', 'فعال', 'حالة_التفعيل', 'مفعل/غير مفعل'],
     isDestroyed: ['الهدم', 'مهدم', 'حالة الهدم', 'حالة_الهدم', 'نسبة الهدم', 'مهدم كلياً/مهدم جزئياً'],
-    state: ['الحالة', 'حالة البناء', 'وضع البناء', 'حالة_البناء', 'حالته', 'حالة المسجد'],
+    state: ['الحالة', 'حالة البناء', 'وضع البناء', 'حالة_البناء', 'حالته', 'حالة المسجد', 'حالته البناء', 'وضع البناء', 'حالة_المسجد'],
     friday: ['خطبة الجمعة', 'جمعة', 'صلاة الجمعة', 'خطبة_الجمعة', 'تقام فيه خطبة الجمعة'],
     attachments: ['الملحقات', 'الإنشآت', 'المرافق', 'الملحقات_الإنشائية', 'ملحقات المسجد'],
     imam: ['الإمام', 'اسم الإمام', 'إمام المسجد', 'اسم_الإمام', 'اسم الإمام الثلاثي', 'اسم الإمام المعاون'],
@@ -257,22 +257,22 @@ export default function Home() {
     }
     
     const validCategories = ['أ', 'ب', 'ج', 'د']
-    if (!validCategories.includes(data.category)) {
+    if (data.category && !validCategories.includes(data.category)) {
       errors.push(`الفئة يجب أن تكون واحدة من: ${validCategories.join(', ')}`)
     }
     
     const validTypes = ['عام', 'مركزي', 'عام أثري', 'مركزي أثري']
-    if (!validTypes.includes(data.type)) {
+    if (data.type && !validTypes.includes(data.type)) {
       errors.push(`النوع يجب أن يكون واحداً من: ${validTypes.join(', ')}`)
     }
     
     const validStatuses = ['ممتازة', 'جيدة', 'متوسطة', 'ضعيفة', 'ضعيفة جداً']
-    if (!validStatuses.includes(data.status)) {
+    if (data.status && !validStatuses.includes(data.status)) {
       errors.push(`الحالة الفنية يجب أن تكون واحدة من: ${validStatuses.join(', ')}`)
     }
     
     const validStates = ['جاهز', 'بانتظار الترميم', 'قيد الترميم', 'تم ترميمه', 'قيد البناء', 'تم بناؤه']
-    if (!validStates.includes(data.state)) {
+    if (data.state && !validStates.includes(data.state)) {
       errors.push(`حالة البناء يجب أن تكون واحدة من: ${validStates.join(', ')}`)
     }
     
@@ -440,7 +440,7 @@ export default function Home() {
       })
 
       // Check for required fields
-      const requiredFields = ['name', 'city', 'location', 'category', 'type', 'status', 'state']
+      const requiredFields = ['name', 'city', 'location']
       const missingFields = requiredFields.filter(field => 
         !Object.values(mappedColumns).includes(field)
       )
@@ -453,9 +453,9 @@ export default function Home() {
 
       jsonData.forEach((row, index) => {
         const nameKey = Object.keys(row).find(k => mappedColumns[k] === 'name')
-        const mosqueName = nameKey ? row[nameKey] : row['اسم المسجد'] || row['المسجد'] || ''
+        const mosqueName = nameKey ? String(row[nameKey] || '').trim() : String(row['اسم المسجد'] || row['المسجد'] || '').trim()
 
-        if (!mosqueName) {
+        if (!mosqueName || mosqueName.length === 0) {
           errors.push({ row: index + 1, error: 'اسم المسجد مطلوب' })
           return
         }
