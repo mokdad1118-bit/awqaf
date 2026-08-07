@@ -270,6 +270,15 @@ export default function Home() {
           // Set defaults for required fields
           mosqueData.isActive = mosqueData.isActive ?? false
           mosqueData.friday = mosqueData.friday ?? false
+          
+          // Ensure all required fields have values
+          mosqueData.name = mosqueData.name || ''
+          mosqueData.city = mosqueData.city || ''
+          mosqueData.location = mosqueData.location || ''
+          mosqueData.category = mosqueData.category || 'أ'
+          mosqueData.type = mosqueData.type || 'عام'
+          mosqueData.status = mosqueData.status || 'جيدة'
+          mosqueData.state = mosqueData.state || 'جاهز'
 
           const res = await fetch('/api/mosques', {
             method: 'POST',
@@ -292,31 +301,48 @@ export default function Home() {
       if (duplicateAction !== 'skip' && importPreview.duplicateList.length > 0) {
         for (const dup of importPreview.duplicateList) {
           try {
+            const row = importPreview.jsonData[dup.row - 1]
+            const mapped = importPreview.mappedColumns
+
+            const mosqueData: any = {}
+            Object.keys(mapped).forEach(excelHeader => {
+              const field = mapped[excelHeader]
+              mosqueData[field] = row[excelHeader]
+            })
+
+            // Handle boolean fields
+            if (mosqueData.isActive) {
+              mosqueData.isActive = mosqueData.isActive === 'نعم' || mosqueData.isActive === 'true' || mosqueData.isActive === true
+            }
+            if (mosqueData.friday) {
+              mosqueData.friday = mosqueData.friday === 'نعم' || mosqueData.friday === 'true' || mosqueData.friday === true
+            }
+
+            // Handle numeric fields
+            if (mosqueData.area) {
+              mosqueData.area = Number(mosqueData.area) || null
+            }
+
+            // Set defaults for required fields
+            mosqueData.isActive = mosqueData.isActive ?? false
+            mosqueData.friday = mosqueData.friday ?? false
+            
+            // Ensure all required fields have values
+            mosqueData.name = mosqueData.name || ''
+            mosqueData.city = mosqueData.city || ''
+            mosqueData.location = mosqueData.location || ''
+            mosqueData.category = mosqueData.category || 'أ'
+            mosqueData.type = mosqueData.type || 'عام'
+            mosqueData.status = mosqueData.status || 'جيدة'
+            mosqueData.state = mosqueData.state || 'جاهز'
+
             if (duplicateAction === 'update') {
-              const row = importPreview.jsonData[dup.row - 1]
-              const mapped = importPreview.mappedColumns
-
-              const mosqueData: any = {}
-              Object.keys(mapped).forEach(excelHeader => {
-                const field = mapped[excelHeader]
-                mosqueData[field] = row[excelHeader]
-              })
-
               await fetch(`/api/mosques/${dup.existingId}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(mosqueData),
               })
             } else if (duplicateAction === 'create') {
-              const row = importPreview.jsonData[dup.row - 1]
-              const mapped = importPreview.mappedColumns
-
-              const mosqueData: any = {}
-              Object.keys(mapped).forEach(excelHeader => {
-                const field = mapped[excelHeader]
-                mosqueData[field] = row[excelHeader]
-              })
-
               await fetch('/api/mosques', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
