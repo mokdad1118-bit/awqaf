@@ -26,6 +26,11 @@ function AddWorkerForm() {
     status: 'قائم على رأس عمله',
     kafala: 'كفالة كلية',
     notes: '',
+    directorate: '',
+    department: '',
+    office: '',
+    location: '',
+    shamCashAccount: '',
   })
 
   useEffect(() => {
@@ -98,6 +103,18 @@ function AddWorkerForm() {
                 <input name="nationalId" value={formData.nationalId} onChange={handleChange} required className={inputClass} />
               </div>
               <div>
+                <label className={labelClass}>المديرية</label>
+                <input name="directorate" value={formData.directorate} onChange={handleChange} className={inputClass} />
+              </div>
+              <div>
+                <label className={labelClass}>الشعبة</label>
+                <input name="department" value={formData.department} onChange={handleChange} className={inputClass} />
+              </div>
+              <div>
+                <label className={labelClass}>المكتب</label>
+                <input name="office" value={formData.office} onChange={handleChange} className={inputClass} />
+              </div>
+              <div>
                 <label className={labelClass}>المسجد *</label>
                 <select name="mosqueId" value={formData.mosqueId} onChange={handleChange} required className={inputClass}>
                   <option value="">اختر المسجد</option>
@@ -105,6 +122,10 @@ function AddWorkerForm() {
                     <option key={m.id} value={m.id}>{m.name} — {m.city}</option>
                   ))}
                 </select>
+              </div>
+              <div>
+                <label className={labelClass}>مكانه</label>
+                <input name="location" value={formData.location} onChange={handleChange} className={inputClass} />
               </div>
               <div>
                 <label className={labelClass}>المسمى الوظيفي</label>
@@ -188,6 +209,10 @@ function AddWorkerForm() {
                   <option value="صندوق المسجد أو الجمعيات">صندوق المسجد أو الجمعيات</option>
                   <option value="غير مكفول نهائي">غير مكفول نهائي</option>
                 </select>
+              </div>
+              <div>
+                <label className={labelClass}>حساب شام كاش</label>
+                <input name="shamCashAccount" value={formData.shamCashAccount} onChange={handleChange} className={inputClass} />
               </div>
               <div className="md:col-span-2">
                 <label className={labelClass}>ملاحظات</label>

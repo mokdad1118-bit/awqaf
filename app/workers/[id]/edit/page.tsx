@@ -22,6 +22,11 @@ export default function EditWorkerPage({ params }: { params: { id: string } }) {
     status: '',
     kafala: '',
     notes: '',
+    directorate: '',
+    department: '',
+    office: '',
+    location: '',
+    shamCashAccount: '',
   })
 
   useEffect(() => {
@@ -46,6 +51,11 @@ export default function EditWorkerPage({ params }: { params: { id: string } }) {
         status: data.status,
         kafala: data.kafala,
         notes: data.notes || '',
+        directorate: data.directorate || '',
+        department: data.department || '',
+        office: data.office || '',
+        location: data.location || '',
+        shamCashAccount: data.shamCashAccount || '',
       })
     } catch (error) {
       console.error('Error:', error)
@@ -105,6 +115,33 @@ export default function EditWorkerPage({ params }: { params: { id: string } }) {
                   />
                 </div>
                 <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">المديرية</label>
+                  <input
+                    type="text"
+                    value={formData.directorate}
+                    onChange={(e) => setFormData({ ...formData, directorate: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">الشعبة</label>
+                  <input
+                    type="text"
+                    value={formData.department}
+                    onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">المكتب</label>
+                  <input
+                    type="text"
+                    value={formData.office}
+                    onChange={(e) => setFormData({ ...formData, office: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                  />
+                </div>
+                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">المسمى الوظيفي</label>
                   <input
                     type="text"
@@ -112,6 +149,15 @@ export default function EditWorkerPage({ params }: { params: { id: string } }) {
                     onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                     required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">مكانه</label>
+                  <input
+                    type="text"
+                    value={formData.location}
+                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                   />
                 </div>
                 <div>
@@ -205,6 +251,15 @@ export default function EditWorkerPage({ params }: { params: { id: string } }) {
                     <option value="صندوق المسجد أو الجمعيات">صندوق المسجد أو الجمعيات</option>
                     <option value="غير مكفول نهائي">غير مكفول نهائي</option>
                   </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">حساب شام كاش</label>
+                  <input
+                    type="text"
+                    value={formData.shamCashAccount}
+                    onChange={(e) => setFormData({ ...formData, shamCashAccount: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                  />
                 </div>
               </div>
               <div className="col-span-2">

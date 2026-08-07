@@ -91,15 +91,21 @@ export default function WorkersPage() {
     const rows = filteredWorkers.map((w) => ({
       'الاسم الثلاثي': w.name,
       'الرقم الوطني': w.nationalId,
-      'المسجد': w.mosque?.name || '',
+      'المديرية': w.directorate || '',
+      'الشعبة': w.department || '',
+      'المكتب': w.office || '',
+      'الوضع الوظيفي': w.status,
+      'تقييم العامل': w.evaluation,
+      'اسم المسجد': w.mosque?.name || '',
+      'المدينة/القرية': w.mosque?.city || '',
+      'مكانه': w.location || '',
+      'طبيعة الكفالة': w.kafala,
       'المسمى الوظيفي': w.role,
-      'الشهادة': w.education,
-      'التقييم': w.evaluation,
-      'الحفظ': w.quranMem,
-      'الراتب': w.salary,
-      'الراتب بالدولار': w.salaryUSD,
-      'الوضع': w.status,
-      'الكفالة': w.kafala,
+      'الشهادة الدراسية': w.education,
+      'فئة المسجد': w.mosque?.category || '',
+      'المحفوظ من القرآن': w.quranMem,
+      'إجمالي الراتب': w.salary,
+      'حساب شام كاش': w.shamCashAccount || '',
       'ملاحظات': w.notes || '',
       'تاريخ الإضافة': new Date(w.createdAt).toLocaleDateString('ar-SY'),
     }))
@@ -146,14 +152,19 @@ export default function WorkersPage() {
             nationalId: String(row['الرقم الوطني'] || row['رقم_الوطني'] || ''),
             mosqueId,
             role: row['المسمى الوظيفي'] || row['المسمى'] || row['الوظيفة'] || '',
-            education: row['الشهادة'] || row['المؤهل'] || '',
-            evaluation: row['التقييم'] || row['التقدير'] || 'وسط',
-            quranMem: row['الحفظ'] || row['القرآن'] || '',
-            salary: Number(row['الراتب'] || 0),
+            education: row['الشهادة الدراسية'] || row['الشهادة'] || row['المؤهل'] || '',
+            evaluation: row['تقييم العامل'] || row['التقييم'] || row['التقدير'] || 'وسط',
+            quranMem: row['المحفوظ من القرآن'] || row['الحفظ'] || row['القرآن'] || '',
+            salary: Number(row['إجمالي الراتب'] || row['الراتب'] || 0),
             salaryUSD: Number(row['الراتب بالدولار'] || row['راتب_دولار'] || 0),
-            status: row['الوضع'] || row['الحالة'] || 'نشط',
-            kafala: row['الكفالة'] || '',
+            status: row['الوضع الوظيفي'] || row['الوضع'] || row['الحالة'] || 'نشط',
+            kafala: row['طبيعة الكفالة'] || row['الكفالة'] || '',
             notes: row['ملاحظات'] || '',
+            directorate: row['المديرية'] || '',
+            department: row['الشعبة'] || '',
+            office: row['المكتب'] || '',
+            location: row['مكانه'] || '',
+            shamCashAccount: row['حساب شام كاش'] || '',
           }
 
           const res = await fetch('/api/workers', {
@@ -313,11 +324,12 @@ export default function WorkersPage() {
                       <th className="px-4 py-3 text-right text-sm font-bold">#</th>
                       <th className="px-4 py-3 text-right text-sm font-bold">الاسم الثلاثي</th>
                       <th className="px-4 py-3 text-right text-sm font-bold">الرقم الوطني</th>
+                      <th className="px-4 py-3 text-right text-sm font-bold">المديرية</th>
+                      <th className="px-4 py-3 text-right text-sm font-bold">الشعبة</th>
                       <th className="px-4 py-3 text-right text-sm font-bold">المسجد</th>
                       <th className="px-4 py-3 text-right text-sm font-bold">المسمى الوظيفي</th>
                       <th className="px-4 py-3 text-right text-sm font-bold">الشهادة</th>
                       <th className="px-4 py-3 text-right text-sm font-bold">التقييم</th>
-                      <th className="px-4 py-3 text-right text-sm font-bold">الحفظ</th>
                       <th className="px-4 py-3 text-right text-sm font-bold">الراتب</th>
                       <th className="px-4 py-3 text-right text-sm font-bold">الوضع</th>
                       <th className="px-4 py-3 text-right text-sm font-bold">إجراءات</th>
@@ -329,6 +341,8 @@ export default function WorkersPage() {
                         <td className="px-4 py-3 text-sm text-gray-500">{index + 1}</td>
                         <td className="px-4 py-3 text-sm font-bold text-primary-dark">{worker.name}</td>
                         <td className="px-4 py-3 text-sm text-gray-600">{worker.nationalId}</td>
+                        <td className="px-4 py-3 text-sm text-gray-600">{worker.directorate || '-'}</td>
+                        <td className="px-4 py-3 text-sm text-gray-600">{worker.department || '-'}</td>
                         <td className="px-4 py-3 text-sm">
                           <Link href={`/mosques/${worker.mosqueId}`} className="flex items-center gap-1 text-primary hover:underline">
                             <Building size={12} />
@@ -346,7 +360,6 @@ export default function WorkersPage() {
                             {worker.evaluation}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-sm">{worker.quranMem}</td>
                         <td className="px-4 py-3 text-sm font-bold text-primary">{worker.salary.toLocaleString()}</td>
                         <td className="px-4 py-3 text-sm">{worker.status}</td>
                         <td className="px-4 py-3">
@@ -382,15 +395,21 @@ export default function WorkersPage() {
               <ul className="text-xs text-gray-500 mb-4 space-y-1 list-disc list-inside">
                 <li>الاسم الثلاثي (أو الاسم)</li>
                 <li>الرقم الوطني</li>
+                <li>المديرية</li>
+                <li>الشعبة</li>
+                <li>المكتب</li>
                 <li>المسجد (يجب أن يكون موجوداً في النظام)</li>
+                <li>المدينة/القرية</li>
+                <li>مكانه</li>
+                <li>طبيعة الكفالة</li>
                 <li>المسمى الوظيفي</li>
-                <li>الشهادة</li>
-                <li>التقييم</li>
-                <li>الحفظ</li>
-                <li>الراتب</li>
-                <li>الراتب بالدولار</li>
-                <li>الوضع</li>
-                <li>الكفالة</li>
+                <li>الشهادة الدراسية</li>
+                <li>فئة المسجد</li>
+                <li>المحفوظ من القرآن</li>
+                <li>إجمالي الراتب</li>
+                <li>حساب شام كاش</li>
+                <li>الوضع الوظيفي</li>
+                <li>تقييم العامل</li>
                 <li>ملاحظات</li>
               </ul>
               <input

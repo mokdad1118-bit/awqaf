@@ -37,6 +37,11 @@ export interface Worker {
   status: string
   kafala: string
   notes: string | null
+  directorate: string | null
+  department: string | null
+  office: string | null
+  location: string | null
+  shamCashAccount: string | null
   createdAt: string
   updatedAt: string
 }

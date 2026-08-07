@@ -31,23 +31,28 @@ model Mosque {
 }
 
 model Worker {
-  id          Int      @id @default(autoincrement())
-  name        String
-  nationalId  String   @unique
-  mosqueId    Int
-  mosque      Mosque   @relation(fields: [mosqueId], references: [id], onDelete: Cascade)
-  role        String
-  education   String
-  evaluation  String   // ممتاز, جيد, وسط, ضعيف, ضعيف جداً, مميز
-  quranMem    String   // إجازة, إجازة بالقراءات العشر, 1-4 جزء, 5-10 جزء, 11-20 جزء, 21-30 جزء
-  salary      Int      @default(0)
-  salaryUSD   Int      @default(0)
-  status      String   // قائم على رأس عمله, استقالة, إجازة, مفصول مؤقت, مفصول نهائي, نقل ضمن المحافظة, نقل خارج المحافظة
-  kafala      String   // كفالة كلية, كفالة جزئية, صندوق المسجد أو الجمعيات, غير مكفول نهائي
-  notes       String?
-  permissions String   @default("") // JSON string: ["التنمية الإدارية", "الحلقات التربوية", "المحاسبة"]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id               Int      @id @default(autoincrement())
+  name             String
+  nationalId       String   @unique
+  mosqueId         Int
+  mosque           Mosque   @relation(fields: [mosqueId], references: [id], onDelete: Cascade)
+  role             String
+  education        String
+  evaluation       String   // ممتاز, جيد, وسط, ضعيف, ضعيف جداً, مميز
+  quranMem         String   // إجازة, إجازة بالقراءات العشر, 1-4 جزء, 5-10 جزء, 11-20 جزء, 21-30 جزء
+  salary           Int      @default(0)
+  salaryUSD        Int      @default(0)
+  status           String   // قائم على رأس عمله, استقالة, إجازة, مفصول مؤقت, مفصول نهائي, نقل ضمن المحافظة, نقل خارج المحافظة
+  kafala           String   // كفالة كلية, كفالة جزئية, صندوق المسجد أو الجمعيات, غير مكفول نهائي
+  notes            String?
+  directorate      String?  // المديرية
+  department       String?  // الشعبة
+  office           String?  // المكتب
+  location         String?  // مكانه
+  shamCashAccount  String?  // حساب شام كاش
+  permissions      String   @default("") // JSON string: ["التنمية الإدارية", "الحلقات التربوية", "المحاسبة"]
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }
 
 model User {
