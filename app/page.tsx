@@ -70,7 +70,9 @@ export default function Home() {
         activeFilter === 'all' ||
         (activeFilter === 'active' && m.isActive) ||
         (activeFilter === 'inactive' && !m.isActive) ||
-        (activeFilter === 'destroyed' && Boolean(m.isDestroyed && m.isDestroyed !== 'لا يوجد'))
+        (activeFilter === 'destroyed' && Boolean(m.isDestroyed && m.isDestroyed !== 'لا يوجد')) ||
+        (activeFilter === 'partially-destroyed' && m.isDestroyed === 'مهدم جزئياً') ||
+        (activeFilter === 'fully-destroyed' && m.isDestroyed === 'مهدم كلياً')
 
       return matchesSearch && matchesFilter && isInsideDateRange(m.createdAt)
     })
@@ -513,7 +515,7 @@ export default function Home() {
 
           // Handle boolean fields
           if (mosqueData.isActive !== undefined) {
-            mosqueData.isActive = mosqueData.isActive === 'نعم' || mosqueData.isActive === 'true' || mosqueData.isActive === true
+            mosqueData.isActive = mosqueData.isActive === 'نعم' || mosqueData.isActive === 'true' || mosqueData.isActive === true || mosqueData.isActive === 'مفعل'
           } else {
             mosqueData.isActive = false
           }
@@ -532,12 +534,15 @@ export default function Home() {
           }
           
           // Convert empty strings to null for optional string fields
-          if (mosqueData.isDestroyed === '') mosqueData.isDestroyed = null
-          if (mosqueData.attachments === '') mosqueData.attachments = null
-          if (mosqueData.imam === '') mosqueData.imam = null
-          if (mosqueData.khatib === '') mosqueData.khatib = null
-          if (mosqueData.muezzin === '') mosqueData.muezzin = null
-          if (mosqueData.khadim === '') mosqueData.khadim = null
+          // isDestroyed should NOT be null if it has a valid value like "مهدم جزئياً"
+          if (mosqueData.isDestroyed === '' || mosqueData.isDestroyed === 'لا يوجد' || mosqueData.isDestroyed === undefined) {
+            mosqueData.isDestroyed = null
+          }
+          if (mosqueData.attachments === '' || mosqueData.attachments === 'لا يوجد') mosqueData.attachments = null
+          if (mosqueData.imam === '' || mosqueData.imam === 'ـ') mosqueData.imam = null
+          if (mosqueData.khatib === '' || mosqueData.khatib === 'ـ') mosqueData.khatib = null
+          if (mosqueData.muezzin === '' || mosqueData.muezzin === 'ـ') mosqueData.muezzin = null
+          if (mosqueData.khadim === '' || mosqueData.khadim === 'ـ') mosqueData.khadim = null
           
           // Ensure all required fields have values with trim
           mosqueData.name = (mosqueData.name || '').trim()
@@ -637,7 +642,7 @@ export default function Home() {
 
             // Handle boolean fields
             if (mosqueData.isActive !== undefined) {
-              mosqueData.isActive = mosqueData.isActive === 'نعم' || mosqueData.isActive === 'true' || mosqueData.isActive === true
+              mosqueData.isActive = mosqueData.isActive === 'نعم' || mosqueData.isActive === 'true' || mosqueData.isActive === true || mosqueData.isActive === 'مفعل'
             } else {
               mosqueData.isActive = false
             }
@@ -656,12 +661,15 @@ export default function Home() {
             }
             
             // Convert empty strings to null for optional string fields
-            if (mosqueData.isDestroyed === '') mosqueData.isDestroyed = null
-            if (mosqueData.attachments === '') mosqueData.attachments = null
-            if (mosqueData.imam === '') mosqueData.imam = null
-            if (mosqueData.khatib === '') mosqueData.khatib = null
-            if (mosqueData.muezzin === '') mosqueData.muezzin = null
-            if (mosqueData.khadim === '') mosqueData.khadim = null
+            // isDestroyed should NOT be null if it has a valid value like "مهدم جزئياً"
+            if (mosqueData.isDestroyed === '' || mosqueData.isDestroyed === 'لا يوجد' || mosqueData.isDestroyed === undefined) {
+              mosqueData.isDestroyed = null
+            }
+            if (mosqueData.attachments === '' || mosqueData.attachments === 'لا يوجد') mosqueData.attachments = null
+            if (mosqueData.imam === '' || mosqueData.imam === 'ـ') mosqueData.imam = null
+            if (mosqueData.khatib === '' || mosqueData.khatib === 'ـ') mosqueData.khatib = null
+            if (mosqueData.muezzin === '' || mosqueData.muezzin === 'ـ') mosqueData.muezzin = null
+            if (mosqueData.khadim === '' || mosqueData.khadim === 'ـ') mosqueData.khadim = null
             
             // Ensure all required fields have values with trim
             mosqueData.name = (mosqueData.name || '').trim()
@@ -758,6 +766,8 @@ export default function Home() {
     { key: 'active', label: 'مفعلة' },
     { key: 'inactive', label: 'غير مفعلة' },
     { key: 'destroyed', label: 'مهدمة' },
+    { key: 'partially-destroyed', label: 'مهدمّة جزئياً' },
+    { key: 'fully-destroyed', label: 'مهدمّة كلياً' },
   ]
 
   return (
