@@ -33,7 +33,7 @@ export default function Home() {
 
   const fetchMosques = useCallback(async () => {
     try {
-      const res = await fetch('/api/mosques?limit=100')
+      const res = await fetch('/api/mosques?limit=200')
       const data = await res.json()
       setMosques(data.data || data)
     } catch (error) {
@@ -77,8 +77,14 @@ export default function Home() {
 
       const matchesFilter =
         activeFilter === 'all' ||
-        (activeFilter === 'active' && m.isActive && !m.isDestroyed) ||
-        (activeFilter === 'inactive' && !m.isActive && !m.isDestroyed) ||
+        (activeFilter === 'active' && (
+          m.isActive === true || 
+          (typeof m.isActive === 'string' && (m.isActive === 'نعم' || m.isActive === 'مفعل'))
+        ) && !m.isDestroyed) ||
+        (activeFilter === 'inactive' && (
+          m.isActive === false || 
+          (typeof m.isActive === 'string' && (m.isActive === 'لا' || m.isActive === 'غير مفعل'))
+        ) && !m.isDestroyed) ||
         (activeFilter === 'partially-destroyed' && m.isDestroyed === 'مهدم جزئياً') ||
         (activeFilter === 'fully-destroyed' && m.isDestroyed === 'مهدم كلياً')
 
@@ -771,7 +777,10 @@ export default function Home() {
   const stats = useMemo(() => ({
     mosquesCount: mosques.length,
     workersCount: mosques.reduce((acc, m) => acc + (m._count?.workers || 0), 0),
-    activeMosques: mosques.filter((m) => m.isActive).length,
+    activeMosques: mosques.filter((m) => 
+      m.isActive === true || 
+      (typeof m.isActive === 'string' && (m.isActive === 'نعم' || m.isActive === 'مفعل'))
+    ).length,
     destroyedMosques: mosques.filter((m) => m.isDestroyed && m.isDestroyed !== 'لا يوجد').length,
   }), [mosques])
 
