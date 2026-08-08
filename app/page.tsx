@@ -8,6 +8,7 @@ import MosqueCard from '@/components/MosqueCard'
 import { Download, RotateCcw, Plus, Upload } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import type { Mosque } from '@/types'
+import { useAuth } from '@/lib/auth'
 
 export default function Home() {
   const [mosques, setMosques] = useState<Mosque[]>([])
@@ -21,6 +22,14 @@ export default function Home() {
   const [importing, setImporting] = useState(false)
   const [duplicateAction, setDuplicateAction] = useState<'skip' | 'update' | 'create'>('skip')
   const [deletingAll, setDeletingAll] = useState(false)
+  const { isAdmin, hasPermission } = useAuth()
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
+  const [advancedFilters, setAdvancedFilters] = useState({
+    category: '',
+    status: '',
+    attachments: '',
+    type: '',
+  })
 
   const fetchMosques = useCallback(async () => {
     try {
@@ -68,15 +77,20 @@ export default function Home() {
 
       const matchesFilter =
         activeFilter === 'all' ||
-        (activeFilter === 'active' && m.isActive) ||
-        (activeFilter === 'inactive' && !m.isActive) ||
-        (activeFilter === 'destroyed' && Boolean(m.isDestroyed && m.isDestroyed !== 'لا يوجد')) ||
+        (activeFilter === 'active' && m.isActive && !m.isDestroyed) ||
+        (activeFilter === 'inactive' && !m.isActive && !m.isDestroyed) ||
         (activeFilter === 'partially-destroyed' && m.isDestroyed === 'مهدم جزئياً') ||
         (activeFilter === 'fully-destroyed' && m.isDestroyed === 'مهدم كلياً')
 
-      return matchesSearch && matchesFilter && isInsideDateRange(m.createdAt)
+      const matchesAdvancedFilters =
+        (!advancedFilters.category || m.category === advancedFilters.category) &&
+        (!advancedFilters.status || m.status === advancedFilters.status) &&
+        (!advancedFilters.attachments || m.attachments === advancedFilters.attachments) &&
+        (!advancedFilters.type || m.type === advancedFilters.type)
+
+      return matchesSearch && matchesFilter && matchesAdvancedFilters && isInsideDateRange(m.createdAt)
     })
-  }, [mosques, searchQuery, activeFilter, isInsideDateRange])
+  }, [mosques, searchQuery, activeFilter, isInsideDateRange, advancedFilters])
 
   const handleDelete = useCallback(async (id: number) => {
     if (!confirm('هل أنت متأكد من حذف هذا المسجد؟')) return
@@ -765,7 +779,6 @@ export default function Home() {
     { key: 'all', label: 'الكل' },
     { key: 'active', label: 'مفعلة' },
     { key: 'inactive', label: 'غير مفعلة' },
-    { key: 'destroyed', label: 'مهدمة' },
     { key: 'partially-destroyed', label: 'مهدمّة جزئياً' },
     { key: 'fully-destroyed', label: 'مهدمّة كلياً' },
   ]
@@ -792,6 +805,91 @@ export default function Home() {
                     {f.label}
                   </button>
                 ))}
+                <div className="relative">
+                  <button
+                    onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
+                      showAdvancedFilters || Object.values(advancedFilters).some(v => v)
+                        ? 'bg-gold text-primary-dark shadow-md'
+                        : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+                    }`}
+                  >
+                    فلاتر متقدمة
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`transition-transform ${showAdvancedFilters ? 'rotate-180' : ''}`}>
+                      <path d="M6 9l6 6 6-6"/>
+                    </svg>
+                  </button>
+                  {showAdvancedFilters && (
+                    <div className="absolute top-full right-0 mt-2 bg-white rounded-lg border border-gray-200 shadow-lg p-4 z-50 w-72">
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-700 mb-1">الفئة</label>
+                          <select
+                            value={advancedFilters.category}
+                            onChange={(e) => setAdvancedFilters({...advancedFilters, category: e.target.value})}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
+                          >
+                            <option value="">الكل</option>
+                            <option value="أ">أ</option>
+                            <option value="ب">ب</option>
+                            <option value="ج">ج</option>
+                            <option value="د">د</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-700 mb-1">الحالة الفنية</label>
+                          <select
+                            value={advancedFilters.status}
+                            onChange={(e) => setAdvancedFilters({...advancedFilters, status: e.target.value})}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
+                          >
+                            <option value="">الكل</option>
+                            <option value="ممتازة">ممتازة</option>
+                            <option value="جيدة">جيدة</option>
+                            <option value="متوسطة">متوسطة</option>
+                            <option value="ضعيفة">ضعيفة</option>
+                            <option value="ضعيفة جداً">ضعيفة جداً</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-700 mb-1">الملحقات</label>
+                          <select
+                            value={advancedFilters.attachments}
+                            onChange={(e) => setAdvancedFilters({...advancedFilters, attachments: e.target.value})}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
+                          >
+                            <option value="">الكل</option>
+                            <option value="سدة">سدة</option>
+                            <option value="قبو">قبو</option>
+                            <option value="سدة وقبو">سدة وقبو</option>
+                            <option value="لا يوجد">لا يوجد</option>
+                            <option value="محل">محل</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-700 mb-1">النوع</label>
+                          <select
+                            value={advancedFilters.type}
+                            onChange={(e) => setAdvancedFilters({...advancedFilters, type: e.target.value})}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
+                          >
+                            <option value="">الكل</option>
+                            <option value="عام">عام</option>
+                            <option value="مركزي">مركزي</option>
+                            <option value="عام أثري">عام أثري</option>
+                            <option value="مركزي أثري">مركزي أثري</option>
+                          </select>
+                        </div>
+                        <button
+                          onClick={() => setAdvancedFilters({ category: '', status: '', attachments: '', type: '' })}
+                          className="w-full px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                        >
+                          مسح الفلاتر
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
@@ -816,13 +914,15 @@ export default function Home() {
                   <Download size={16} />
                   تصدير Excel
                 </button>
-                <button
-                  onClick={handleDeleteAll}
-                  disabled={deletingAll}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {deletingAll ? 'جاري الحذف...' : 'حذف الكل'}
-                </button>
+                {(isAdmin || hasPermission('المساجد')) && (
+                  <button
+                    onClick={handleDeleteAll}
+                    disabled={deletingAll}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {deletingAll ? 'جاري الحذف...' : 'حذف الكل'}
+                  </button>
+                )}
                 <button
                   onClick={resetFilters}
                   className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 text-gray-600 text-sm hover:bg-gray-50"

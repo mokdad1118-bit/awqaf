@@ -26,8 +26,11 @@ function MosqueCard({ mosque, onDelete }: MosqueCardProps) {
   const workerCount = displayWorkers.length
 
   const getStatusBadge = useCallback(() => {
-    if (mosque.isDestroyed && mosque.isDestroyed !== 'لا يوجد') {
-      return { text: 'مهدّم', className: 'bg-purple-100 text-purple-700' }
+    if (mosque.isDestroyed === 'مهدم جزئياً') {
+      return { text: 'مهدم جزئياً', className: 'bg-purple-100 text-purple-700' }
+    }
+    if (mosque.isDestroyed === 'مهدم كلياً') {
+      return { text: 'مهدم كلياً', className: 'bg-red-100 text-red-700' }
     }
     if (mosque.isActive) {
       return { text: 'مفعل', className: 'bg-emerald-100 text-emerald-700' }
