@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { memo, useCallback, useState } from 'react'
+import { memo, useCallback, useState, useContext } from 'react'
 import { cn } from '@/lib/utils'
 import {
   Building,
@@ -20,6 +20,7 @@ import {
   DollarSign
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth'
+import { useSidebar } from './AppShell'
 
 const adminDevItems = [
   { href: '/', label: 'الرئيسية', icon: LayoutDashboard, permission: 'التنمية الإدارية' },
@@ -52,7 +53,7 @@ function isEducationalCirclesPath(pathname: string) {
 }
 
 export default memo(function Sidebar({ mobileMenuOpen, setMobileMenuOpen }: { mobileMenuOpen: boolean; setMobileMenuOpen: (open: boolean) => void }) {
-  const [collapsed, setCollapsed] = useState(false)
+  const { collapsed, setCollapsed } = useSidebar()
   const [adminDevOpen, setAdminDevOpen] = useState(false)
   const [educationalCirclesOpen, setEducationalCirclesOpen] = useState(false)
   const pathname = usePathname()

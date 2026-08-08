@@ -17,6 +17,12 @@ export default function WorkersPage() {
   const [dateTo, setDateTo] = useState('')
   const [showImportDialog, setShowImportDialog] = useState(false)
   const [importing, setImporting] = useState(false)
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
+  const [advancedFilters, setAdvancedFilters] = useState({
+    quranMem: '',
+    kafala: '',
+    education: '',
+  })
 
   useEffect(() => {
     fetchWorkers()
@@ -24,7 +30,7 @@ export default function WorkersPage() {
 
   const fetchWorkers = async () => {
     try {
-      const res = await fetch('/api/workers?limit=100')
+      const res = await fetch('/api/workers?limit=1000')
       const data = await res.json()
       setWorkers(data.data || data)
     } catch (error) {
@@ -65,9 +71,14 @@ export default function WorkersPage() {
       const matchesRole = roleFilter === 'all' || w.role.includes(roleFilter)
       const matchesStatus = statusFilter === 'all' || w.status === statusFilter
 
-      return matchesSearch && matchesRole && matchesStatus && isInsideDateRange(w.createdAt)
+      const matchesAdvancedFilters =
+        (!advancedFilters.quranMem || w.quranMem === advancedFilters.quranMem) &&
+        (!advancedFilters.kafala || w.kafala === advancedFilters.kafala) &&
+        (!advancedFilters.education || w.education === advancedFilters.education)
+
+      return matchesSearch && matchesRole && matchesStatus && matchesAdvancedFilters && isInsideDateRange(w.createdAt)
     })
-  }, [workers, searchQuery, roleFilter, statusFilter, dateFrom, dateTo])
+  }, [workers, searchQuery, roleFilter, statusFilter, dateFrom, dateTo, advancedFilters])
 
   const handleDelete = async (id: number) => {
     if (!confirm('هل أنت متأكد من حذف هذا العامل؟')) return
@@ -85,6 +96,7 @@ export default function WorkersPage() {
     setStatusFilter('all')
     setDateFrom('')
     setDateTo('')
+    setAdvancedFilters({ quranMem: '', kafala: '', education: '' })
   }
 
   const exportToExcel = () => {
@@ -140,6 +152,7 @@ export default function WorkersPage() {
 
       let successCount = 0
       let errorCount = 0
+      const errors: string[] = []
 
       for (const row of jsonData) {
         try {
@@ -148,6 +161,7 @@ export default function WorkersPage() {
 
           if (!mosqueId) {
             console.warn(`Mosque not found: "${mosqueName}"`)
+            errors.push(`المسجد "${mosqueName}" غير موجود`)
             errorCount++
             continue
           }
@@ -181,15 +195,25 @@ export default function WorkersPage() {
           if (res.ok) {
             successCount++
           } else {
+            const errorData = await res.json()
+            console.error('API Error:', errorData)
+            errors.push(`${workerData.name}: ${errorData.error || 'خطأ غير معروف'}`)
             errorCount++
           }
         } catch (error) {
           console.error('Error importing row:', row, error)
+          errors.push(`${row['الاسم الثلاثي'] || row['الاسم'] || 'غير معروف'}: خطأ في المعالجة`)
           errorCount++
         }
       }
 
-      alert(`تم الاستيراد بنجاح: ${successCount} عامل\nفشل: ${errorCount} عامل`)
+      let summary = `تم الاستيراد بنجاح: ${successCount} عامل\nفشل: ${errorCount} عامل\n\n`
+      if (errors.length > 0 && errors.length <= 10) {
+        summary += `الأخطاء:\n${errors.join('\n')}`
+      } else if (errors.length > 10) {
+        summary += `الأخطاء (أول 10):\n${errors.slice(0, 10).join('\n')}\n... و ${errors.length - 10} أخطاء أخرى`
+      }
+      alert(summary)
       fetchWorkers()
       setShowImportDialog(false)
     } catch (error) {
@@ -314,6 +338,81 @@ export default function WorkersPage() {
                 />
               </label>
             </div>
+            <div className="flex flex-wrap gap-2">
+              <div className="relative">
+                <button
+                  onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
+                    showAdvancedFilters || Object.values(advancedFilters).some(v => v)
+                      ? 'bg-gold text-primary-dark shadow-md'
+                      : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+                  }`}
+                >
+                  فلاتر متقدمة
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`transition-transform ${showAdvancedFilters ? 'rotate-180' : ''}`}>
+                    <path d="M6 9l6 6 6-6"/>
+                  </svg>
+                </button>
+                {showAdvancedFilters && (
+                  <div className="absolute top-full right-0 mt-2 bg-white rounded-lg border border-gray-200 shadow-lg p-4 z-50 w-72">
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-700 mb-1">الحفظ</label>
+                        <select
+                          value={advancedFilters.quranMem}
+                          onChange={(e) => setAdvancedFilters({...advancedFilters, quranMem: e.target.value})}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
+                        >
+                          <option value="">الكل</option>
+                          <option value="إجازة">إجازة</option>
+                          <option value="إجازة بالقراءات العشر">إجازة بالقراءات العشر</option>
+                          <option value="1-4 جزء">1-4 جزء</option>
+                          <option value="5-10 جزء">5-10 جزء</option>
+                          <option value="11-20 جزء">11-20 جزء</option>
+                          <option value="21-30 جزء">21-30 جزء</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-700 mb-1">الكفالة</label>
+                        <select
+                          value={advancedFilters.kafala}
+                          onChange={(e) => setAdvancedFilters({...advancedFilters, kafala: e.target.value})}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
+                        >
+                          <option value="">الكل</option>
+                          <option value="كفالة كلية">كفالة كلية</option>
+                          <option value="كفالة جزئية">كفالة جزئية</option>
+                          <option value="صندوق المسجد أو الجمعيات">صندوق المسجد أو الجمعيات</option>
+                          <option value="غير مكفول نهائي">غير مكفول نهائي</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-700 mb-1">الشهادة</label>
+                        <select
+                          value={advancedFilters.education}
+                          onChange={(e) => setAdvancedFilters({...advancedFilters, education: e.target.value})}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
+                        >
+                          <option value="">الكل</option>
+                          <option value="ثانوية عامة">ثانوية عامة</option>
+                          <option value="ثانوية شرعية">ثانوية شرعية</option>
+                          <option value="إعدادية شرعية">إعدادية شرعية</option>
+                          <option value="معهد قرآن">معهد قرآن</option>
+                          <option value="جامعة">جامعة</option>
+                          <option value="أخرى">أخرى</option>
+                        </select>
+                      </div>
+                      <button
+                        onClick={() => setAdvancedFilters({ quranMem: '', kafala: '', education: '' })}
+                        className="w-full px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                      >
+                        مسح الفلاتر
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
 
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
@@ -335,6 +434,8 @@ export default function WorkersPage() {
                       <th className="px-4 py-3 text-right text-sm font-bold">المسجد</th>
                       <th className="px-4 py-3 text-right text-sm font-bold">المسمى الوظيفي</th>
                       <th className="px-4 py-3 text-right text-sm font-bold">الشهادة</th>
+                      <th className="px-4 py-3 text-right text-sm font-bold">الحفظ</th>
+                      <th className="px-4 py-3 text-right text-sm font-bold">الكفالة</th>
                       <th className="px-4 py-3 text-right text-sm font-bold">التقييم</th>
                       <th className="px-4 py-3 text-right text-sm font-bold">الراتب</th>
                       <th className="px-4 py-3 text-right text-sm font-bold">الوضع</th>
@@ -362,6 +463,8 @@ export default function WorkersPage() {
                           </span>
                         </td>
                         <td className="px-4 py-3 text-sm">{worker.education}</td>
+                        <td className="px-4 py-3 text-sm">{worker.quranMem}</td>
+                        <td className="px-4 py-3 text-sm">{worker.kafala}</td>
                         <td className="px-4 py-3">
                           <span className={`px-2 py-1 rounded-full text-[10px] font-semibold ${getEvalColor(worker.evaluation)}`}>
                             {worker.evaluation}
