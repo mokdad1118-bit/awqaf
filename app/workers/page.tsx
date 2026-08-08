@@ -170,10 +170,18 @@ export default function WorkersPage() {
       const mosquesData = await mosquesRes.json()
       const mosques = mosquesData.data || mosquesData
       
-      // Create normalized mosque map (trim whitespace)
+      // Create normalized mosque map with fuzzy matching
       const mosqueMap = new Map()
+      const mosqueNameVariations = new Map()
+      
       mosques.forEach((m: any) => {
-        mosqueMap.set(m.name.trim(), m.id)
+        const normalizedName = m.name.trim().toLowerCase()
+        mosqueMap.set(normalizedName, m.id)
+        
+        // Add variations for better matching
+        mosqueNameVariations.set(normalizedName.replace(/\s+/g, ''), m.id) // Remove all spaces
+        mosqueNameVariations.set(normalizedName.replace(/\d+/g, ''), m.id) // Remove numbers
+        mosqueNameVariations.set(normalizedName.replace(/[^\w\s\u0600-\u06FF]/g, ''), m.id) // Remove special chars
       })
 
       let successCount = 0
@@ -183,7 +191,19 @@ export default function WorkersPage() {
       for (const row of jsonData) {
         try {
           const mosqueName = (row['اسم المسجد'] || row['المسجد'] || row['مسجد'] || row['الجامع'] || '').trim()
-          const mosqueId = mosqueMap.get(mosqueName)
+          let mosqueId = mosqueMap.get(mosqueName.toLowerCase())
+          
+          // Try fuzzy matching if exact match fails
+          if (!mosqueId) {
+            const normalizedName = mosqueName.toLowerCase()
+            const noSpaces = normalizedName.replace(/\s+/g, '')
+            const noNumbers = normalizedName.replace(/\d+/g, '')
+            const noSpecial = normalizedName.replace(/[^\w\s\u0600-\u06FF]/g, '')
+            
+            mosqueId = mosqueNameVariations.get(noSpaces) ||
+                       mosqueNameVariations.get(noNumbers) ||
+                       mosqueNameVariations.get(noSpecial)
+          }
 
           if (!mosqueId) {
             console.warn(`Mosque not found: "${mosqueName}"`)
