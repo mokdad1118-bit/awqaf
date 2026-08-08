@@ -13,7 +13,6 @@ export default function WorkersPage() {
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [roleFilter, setRoleFilter] = useState('all')
-  const [statusFilter, setStatusFilter] = useState('all')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
   const [showImportDialog, setShowImportDialog] = useState(false)
@@ -24,6 +23,7 @@ export default function WorkersPage() {
     kafala: '',
     education: '',
     status: '',
+    evaluation: '',
   })
   const [deletingAll, setDeletingAll] = useState(false)
   const { isAdmin, hasPermission } = useAuth()
@@ -73,17 +73,17 @@ export default function WorkersPage() {
         w.mosque?.name.includes(query)
 
       const matchesRole = roleFilter === 'all' || w.role.includes(roleFilter)
-      const matchesStatus = statusFilter === 'all' || w.status === statusFilter
 
       const matchesAdvancedFilters =
         (!advancedFilters.quranMem || w.quranMem === advancedFilters.quranMem) &&
         (!advancedFilters.kafala || w.kafala === advancedFilters.kafala) &&
         (!advancedFilters.education || w.education === advancedFilters.education) &&
-        (!advancedFilters.status || w.status === advancedFilters.status)
+        (!advancedFilters.status || w.status === advancedFilters.status) &&
+        (!advancedFilters.evaluation || w.evaluation === advancedFilters.evaluation)
 
-      return matchesSearch && matchesRole && matchesStatus && matchesAdvancedFilters && isInsideDateRange(w.createdAt)
+      return matchesSearch && matchesRole && matchesAdvancedFilters && isInsideDateRange(w.createdAt)
     })
-  }, [workers, searchQuery, roleFilter, statusFilter, dateFrom, dateTo, advancedFilters])
+  }, [workers, searchQuery, roleFilter, dateFrom, dateTo, advancedFilters])
 
   const handleDelete = async (id: number) => {
     if (!confirm('هل أنت متأكد من حذف هذا العامل؟')) return
@@ -119,10 +119,9 @@ export default function WorkersPage() {
   const resetFilters = () => {
     setSearchQuery('')
     setRoleFilter('all')
-    setStatusFilter('all')
     setDateFrom('')
     setDateTo('')
-    setAdvancedFilters({ quranMem: '', kafala: '', education: '', status: '' })
+    setAdvancedFilters({ quranMem: '', kafala: '', education: '', status: '', evaluation: '' })
   }
 
   const exportToExcel = () => {
@@ -343,7 +342,7 @@ export default function WorkersPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <label className="space-y-1">
                 <span className="text-xs font-semibold text-gray-600">المسمى الوظيفي</span>
                 <select
@@ -355,21 +354,6 @@ export default function WorkersPage() {
                   {roles.map((role) => (
                     <option key={role} value={role}>
                       {role}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="space-y-1">
-                <span className="text-xs font-semibold text-gray-600">الوضع</span>
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-                >
-                  <option value="all">كل الأوضاع</option>
-                  {statuses.map((status) => (
-                    <option key={status} value={status}>
-                      {status}
                     </option>
                   ))}
                 </select>
@@ -472,8 +456,22 @@ export default function WorkersPage() {
                           ))}
                         </select>
                       </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-700 mb-1">التقييم</label>
+                        <select
+                          value={advancedFilters.evaluation}
+                          onChange={(e) => setAdvancedFilters({...advancedFilters, evaluation: e.target.value})}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
+                        >
+                          <option value="">الكل</option>
+                          <option value="ممتاز">ممتاز</option>
+                          <option value="جيد">جيد</option>
+                          <option value="وسط">وسط</option>
+                          <option value="ضعيف">ضعيف</option>
+                        </select>
+                      </div>
                       <button
-                        onClick={() => setAdvancedFilters({ quranMem: '', kafala: '', education: '', status: '' })}
+                        onClick={() => setAdvancedFilters({ quranMem: '', kafala: '', education: '', status: '', evaluation: '' })}
                         className="w-full px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
                       >
                         مسح الفلاتر
