@@ -6,6 +6,7 @@ import Header from '@/components/Header'
 import { Edit, Trash2, Building, Download, RotateCcw, Plus, Upload } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import type { Worker } from '@/types'
+import { useAuth } from '@/lib/auth'
 
 export default function WorkersPage() {
   const [workers, setWorkers] = useState<Worker[]>([])
@@ -22,7 +23,10 @@ export default function WorkersPage() {
     quranMem: '',
     kafala: '',
     education: '',
+    status: '',
   })
+  const [deletingAll, setDeletingAll] = useState(false)
+  const { isAdmin, hasPermission } = useAuth()
 
   useEffect(() => {
     fetchWorkers()
@@ -74,7 +78,8 @@ export default function WorkersPage() {
       const matchesAdvancedFilters =
         (!advancedFilters.quranMem || w.quranMem === advancedFilters.quranMem) &&
         (!advancedFilters.kafala || w.kafala === advancedFilters.kafala) &&
-        (!advancedFilters.education || w.education === advancedFilters.education)
+        (!advancedFilters.education || w.education === advancedFilters.education) &&
+        (!advancedFilters.status || w.status === advancedFilters.status)
 
       return matchesSearch && matchesRole && matchesStatus && matchesAdvancedFilters && isInsideDateRange(w.createdAt)
     })
@@ -90,13 +95,34 @@ export default function WorkersPage() {
     }
   }
 
+  const handleDeleteAll = async () => {
+    if (!confirm('هل أنت متأكد من حذف جميع العاملين؟ هذا الإجراء لا يمكن التراجع عنه!')) return
+    if (!confirm('تأكيد نهائي: سيتم حذف جميع العاملين!')) return
+    
+    setDeletingAll(true)
+    try {
+      const res = await fetch('/api/workers/delete-all', { method: 'DELETE' })
+      if (res.ok) {
+        alert('تم حذف جميع العاملين بنجاح')
+        fetchWorkers()
+      } else {
+        alert('فشل حذف جميع العاملين')
+      }
+    } catch (error) {
+      console.error('Error deleting all workers:', error)
+      alert('حدث خطأ أثناء حذف جميع العاملين')
+    } finally {
+      setDeletingAll(false)
+    }
+  }
+
   const resetFilters = () => {
     setSearchQuery('')
     setRoleFilter('all')
     setStatusFilter('all')
     setDateFrom('')
     setDateTo('')
-    setAdvancedFilters({ quranMem: '', kafala: '', education: '' })
+    setAdvancedFilters({ quranMem: '', kafala: '', education: '', status: '' })
   }
 
   const exportToExcel = () => {
@@ -278,6 +304,15 @@ export default function WorkersPage() {
                   <Download size={16} />
                   تصدير Excel
                 </button>
+                {(isAdmin || hasPermission('حذف العاملين')) && (
+                  <button
+                    onClick={handleDeleteAll}
+                    disabled={deletingAll}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {deletingAll ? 'جاري الحذف...' : 'حذف الكل'}
+                  </button>
+                )}
                 <button
                   onClick={resetFilters}
                   className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 text-gray-600 text-sm hover:bg-gray-50"
@@ -402,8 +437,23 @@ export default function WorkersPage() {
                           <option value="أخرى">أخرى</option>
                         </select>
                       </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-700 mb-1">الوضع</label>
+                        <select
+                          value={advancedFilters.status}
+                          onChange={(e) => setAdvancedFilters({...advancedFilters, status: e.target.value})}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
+                        >
+                          <option value="">الكل</option>
+                          {statuses.map((status) => (
+                            <option key={status} value={status}>
+                              {status}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
                       <button
-                        onClick={() => setAdvancedFilters({ quranMem: '', kafala: '', education: '' })}
+                        onClick={() => setAdvancedFilters({ quranMem: '', kafala: '', education: '', status: '' })}
                         className="w-full px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
                       >
                         مسح الفلاتر
@@ -438,6 +488,7 @@ export default function WorkersPage() {
                       <th className="px-4 py-3 text-right text-sm font-bold">الكفالة</th>
                       <th className="px-4 py-3 text-right text-sm font-bold">التقييم</th>
                       <th className="px-4 py-3 text-right text-sm font-bold">الراتب</th>
+                      <th className="px-4 py-3 text-right text-sm font-bold">حساب شام كاش</th>
                       <th className="px-4 py-3 text-right text-sm font-bold">الوضع</th>
                       <th className="px-4 py-3 text-right text-sm font-bold">إجراءات</th>
                     </tr>
@@ -471,6 +522,7 @@ export default function WorkersPage() {
                           </span>
                         </td>
                         <td className="px-4 py-3 text-sm font-bold text-primary">{worker.salary.toLocaleString()}</td>
+                        <td className="px-4 py-3 text-sm">{worker.shamCashAccount || '-'}</td>
                         <td className="px-4 py-3 text-sm">{worker.status}</td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-1">
