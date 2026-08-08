@@ -9,6 +9,7 @@ import { Download, RotateCcw, Plus, Upload } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import type { Mosque } from '@/types'
 import { useAuth } from '@/lib/auth'
+import { matchesArabic } from '@/lib/arabic-normalize'
 
 export default function Home() {
   const [mosques, setMosques] = useState<Mosque[]>([])
@@ -70,10 +71,10 @@ export default function Home() {
     return mosques.filter((m) => {
       const matchesSearch =
         !query ||
-        m.name.includes(query) ||
-        m.city.includes(query) ||
-        m.location.includes(query) ||
-        m.workers?.some((w) => w.name.includes(query) || w.role.includes(query))
+        matchesArabic(query, m.name) ||
+        matchesArabic(query, m.city) ||
+        matchesArabic(query, m.location) ||
+        m.workers?.some((w) => matchesArabic(query, w.name) || matchesArabic(query, w.role))
 
       const matchesFilter =
         activeFilter === 'all' ||

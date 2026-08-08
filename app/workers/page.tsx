@@ -7,6 +7,7 @@ import { Edit, Trash2, Building, Download, RotateCcw, Plus, Upload } from 'lucid
 import * as XLSX from 'xlsx'
 import type { Worker } from '@/types'
 import { useAuth } from '@/lib/auth'
+import { matchesArabic } from '@/lib/arabic-normalize'
 
 export default function WorkersPage() {
   const [workers, setWorkers] = useState<Worker[]>([])
@@ -67,10 +68,10 @@ export default function WorkersPage() {
     return workers.filter((w) => {
       const matchesSearch =
         !query ||
-        w.name.includes(query) ||
-        w.role.includes(query) ||
-        w.nationalId.includes(query) ||
-        w.mosque?.name.includes(query)
+        matchesArabic(query, w.name) ||
+        matchesArabic(query, w.role) ||
+        matchesArabic(query, w.nationalId) ||
+        (w.mosque?.name && matchesArabic(query, w.mosque.name))
 
       const matchesRole = roleFilter === 'all' || w.role.includes(roleFilter)
 

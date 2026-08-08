@@ -3,8 +3,9 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Plus, Download, Filter, Copy } from 'lucide-react'
+import { Plus, Download, Filter, Copy, Upload } from 'lucide-react'
 import * as XLSX from 'xlsx'
+import { matchesArabic } from '@/lib/arabic-normalize'
 
 interface Reward {
   id: number
@@ -42,6 +43,8 @@ export default function RewardsPage() {
   const [selectedMonth, setSelectedMonth] = useState('')
   const [selectedYear, setSelectedYear] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
+  const [showImportDialog, setShowImportDialog] = useState(false)
+  const [importing, setImporting] = useState(false)
 
   useEffect(() => {
     // Load saved filters from localStorage on mount
@@ -107,8 +110,8 @@ export default function RewardsPage() {
     const query = searchQuery.toLowerCase()
     return rewards.filter(
       (r) =>
-        r.teacherName.toLowerCase().includes(query) ||
-        r.mosque.toLowerCase().includes(query)
+        matchesArabic(query, r.teacherName) ||
+        matchesArabic(query, r.mosque)
     )
   }, [rewards, searchQuery])
 
@@ -127,6 +130,64 @@ export default function RewardsPage() {
     const wb = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'المكافآت')
     XLSX.writeFile(wb, 'rewards.xlsx')
+  }
+
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setImporting(true)
+    try {
+      const data = await file.arrayBuffer()
+      const workbook = XLSX.read(data, { type: 'array' })
+      const sheetName = workbook.SheetNames[0]
+      const worksheet = workbook.Sheets[sheetName]
+      const jsonData = XLSX.utils.sheet_to_json(worksheet) as any[]
+
+      let successCount = 0
+      let errorCount = 0
+      const errors: string[] = []
+
+      for (const row of jsonData) {
+        try {
+          const rewardData = {
+            teacherName: row['اسم المدرس'] || row['المدرس'] || '',
+            region: row['المنطقة'] || row['المنطقه'] || '',
+            mosque: row['المسجد'] || '',
+            amountDue: Number(row['المبلغ المستحق'] || row['المستحق'] || 0),
+            amountPaid: Number(row['المجموع'] || row['الموجوع'] || row['المدفوع'] || 0),
+            month: row['الشهر'] || '',
+            year: Number(row['السنة'] || row['العام'] || new Date().getFullYear()),
+            notes: row['ملاحظات'] || '',
+          }
+
+          const res = await fetch('/api/rewards', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(rewardData),
+          })
+
+          if (res.ok) {
+            successCount++
+          } else {
+            errorCount++
+            errors.push(`فشل في: ${rewardData.teacherName}`)
+          }
+        } catch (error) {
+          errorCount++
+          errors.push(`خطأ في معالجة الصف`)
+        }
+      }
+
+      alert(`تم الاستيراد:\n✅ نجح: ${successCount}\n❌ فشل: ${errorCount}`)
+      fetchRewards()
+    } catch (error) {
+      console.error('Error importing:', error)
+      alert('حدث خطأ أثناء الاستيراد')
+    } finally {
+      setImporting(false)
+      setShowImportDialog(false)
+    }
   }
 
   const handleDelete = async (id: number) => {
@@ -213,6 +274,15 @@ export default function RewardsPage() {
             </Link>
 
             <button
+              onClick={() => setShowImportDialog(true)}
+              disabled={importing}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
+            >
+              <Upload size={16} />
+              <span>{importing ? 'جاري الاستيراد...' : 'استيراد'}</span>
+            </button>
+
+            <button
               onClick={exportToExcel}
               className="flex items-center gap-2 px-4 py-2 bg-gold text-primary-dark rounded-lg text-sm font-medium hover:bg-gold-light transition-colors"
             >
@@ -220,6 +290,30 @@ export default function RewardsPage() {
               <span>تصدير</span>
             </button>
           </div>
+
+          {showImportDialog && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+              <div className="bg-white rounded-xl p-6 w-full max-w-md">
+                <h3 className="text-lg font-bold mb-4">استيراد مكافآت من Excel</h3>
+                <input
+                  type="file"
+                  accept=".xlsx,.xls"
+                  onChange={handleImport}
+                  disabled={importing}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                />
+                <div className="flex gap-2 mt-4">
+                  <button
+                    onClick={() => setShowImportDialog(false)}
+                    disabled={importing}
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+                  >
+                    إلغاء
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {loading ? (
             <div className="flex justify-center py-12">
