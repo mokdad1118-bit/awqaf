@@ -28,6 +28,7 @@ export default function WorkersPage() {
   })
   const [deletingAll, setDeletingAll] = useState(false)
   const { isAdmin, hasPermission } = useAuth()
+  const canImport = isAdmin || hasPermission('استيراد البيانات')
 
   useEffect(() => {
     fetchWorkers()
@@ -154,6 +155,7 @@ export default function WorkersPage() {
   }
 
   const handleImportExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!canImport) return
     const file = e.target.files?.[0]
     if (!file) return
 
@@ -310,13 +312,15 @@ export default function WorkersPage() {
                   <Plus size={16} />
                   إضافة عامل
                 </Link>
-                <button
-                  onClick={() => setShowImportDialog(true)}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700"
-                >
-                  <Upload size={16} />
-                  استيراد Excel
-                </button>
+                {canImport && (
+                  <button
+                    onClick={() => setShowImportDialog(true)}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700"
+                  >
+                    <Upload size={16} />
+                    استيراد Excel
+                  </button>
+                )}
                 <button
                   onClick={exportToExcel}
                   className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700"
@@ -566,7 +570,7 @@ export default function WorkersPage() {
         </div>
 
         {/* Import Dialog */}
-        {showImportDialog && (
+        {canImport && showImportDialog && (
           <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
             <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-xl">
               <h3 className="text-lg font-bold text-primary mb-4">استيراد العاملين من Excel</h3>

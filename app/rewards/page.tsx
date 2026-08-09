@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { Plus, Download, Filter, Copy, Upload } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import { matchesArabic } from '@/lib/arabic-normalize'
+import { useAuth } from '@/lib/auth'
 
 interface Reward {
   id: number
@@ -35,8 +36,101 @@ const months = [
   { name: 'ديسمبر', number: 12 },
 ]
 
+const baseRewardColumns = [
+  'اسم المدرس',
+  'المدرس',
+  'المنطقة',
+  'المنطقه',
+  'المسجد',
+  'المبلغ المستحق',
+  'المستحق',
+  'المجموع',
+  'الموجوع',
+  'المدفوع',
+  'الشهر',
+  'السنة',
+  'العام',
+  'ملاحظات',
+]
+
+const monthWords: Record<string, number> = {
+  يناير: 1,
+  كانون: 1,
+  فبراير: 2,
+  شباط: 2,
+  مارس: 3,
+  اذار: 3,
+  آذار: 3,
+  أبريل: 4,
+  ابريل: 4,
+  نيسان: 4,
+  مايو: 5,
+  ايار: 5,
+  أيار: 5,
+  خمسة: 5,
+  الخامس: 5,
+  يونيو: 6,
+  حزيران: 6,
+  ستة: 6,
+  سته: 6,
+  السادس: 6,
+  يوليو: 7,
+  تموز: 7,
+  أغسطس: 8,
+  اغسطس: 8,
+  آب: 8,
+  سبتمبر: 9,
+  ايلول: 9,
+  أيلول: 9,
+  أكتوبر: 10,
+  اكتوبر: 10,
+  تشرين: 10,
+  نوفمبر: 11,
+  ديسمبر: 12,
+}
+
+const normalizeHeader = (value: string) =>
+  value
+    .replace(/[إأآ]/g, 'ا')
+    .replace(/ة/g, 'ه')
+    .replace(/[ً-ْ]/g, '')
+    .trim()
+    .toLowerCase()
+
+const parseAmount = (value: unknown) => {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : 0
+  const normalized = String(value ?? '')
+    .replace(/[٠-٩]/g, (digit) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit)))
+    .replace(/[٬,]/g, '')
+    .trim()
+  const amount = Number(normalized)
+  return Number.isFinite(amount) ? amount : 0
+}
+
+const getMonthName = (monthNumber: number) =>
+  months.find((month) => month.number === monthNumber)?.name || ''
+
+const detectMonthNumber = (header: string) => {
+  const normalized = normalizeHeader(header)
+  const numericMatch = normalized.match(/(?:شهر|لشهر|الشهر)?\s*(1[0-2]|[1-9])(?:\D|$)/)
+  if (numericMatch) return Number(numericMatch[1])
+
+  for (const [word, monthNumber] of Object.entries(monthWords)) {
+    if (normalized.includes(normalizeHeader(word))) return monthNumber
+  }
+
+  return null
+}
+
+const isBaseRewardColumn = (header: string) => {
+  const normalized = normalizeHeader(header)
+  return baseRewardColumns.some((column) => normalized === normalizeHeader(column))
+}
+
 export default function RewardsPage() {
   const router = useRouter()
+  const { isAdmin, hasPermission } = useAuth()
+  const canImport = isAdmin || hasPermission('استيراد البيانات')
   const isLoaded = useRef(false)
   const [rewards, setRewards] = useState<Reward[]>([])
   const [loading, setLoading] = useState(true)
@@ -133,6 +227,7 @@ export default function RewardsPage() {
   }
 
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!canImport) return
     const file = e.target.files?.[0]
     if (!file) return
 
@@ -150,28 +245,67 @@ export default function RewardsPage() {
 
       for (const row of jsonData) {
         try {
-          const rewardData = {
-            teacherName: row['اسم المدرس'] || row['المدرس'] || '',
-            region: row['المنطقة'] || row['المنطقه'] || '',
-            mosque: row['المسجد'] || '',
-            amountDue: Number(row['المبلغ المستحق'] || row['المستحق'] || 0),
-            amountPaid: Number(row['المجموع'] || row['الموجوع'] || row['المدفوع'] || 0),
-            month: row['الشهر'] || '',
-            year: Number(row['السنة'] || row['العام'] || new Date().getFullYear()),
-            notes: row['ملاحظات'] || '',
+          const teacherName = row['اسم المدرس'] || row['المدرس'] || ''
+          const region = row['المنطقة'] || row['المنطقه'] || ''
+          const mosque = row['المسجد'] || ''
+          const year = Number(row['السنة'] || row['العام'] || selectedYear || new Date().getFullYear())
+          const notes = row['ملاحظات'] || ''
+
+          const monthlyRewards = Object.keys(row)
+            .filter((header) => !isBaseRewardColumn(header))
+            .map((header) => {
+              const monthNumber = detectMonthNumber(header)
+              const amountDue = parseAmount(row[header])
+              if (!monthNumber || amountDue <= 0) return null
+              return {
+                teacherName,
+                region,
+                mosque,
+                amountDue,
+                amountPaid: amountDue,
+                month: getMonthName(monthNumber),
+                year,
+                notes,
+              }
+            })
+            .filter(Boolean) as Omit<Reward, 'id' | 'createdAt'>[]
+
+          const fallbackMonth = row['الشهر'] || ''
+          const fallbackAmount = parseAmount(row['المبلغ المستحق'] || row['المستحق'])
+          const rewardRows = monthlyRewards.length > 0
+            ? monthlyRewards
+            : fallbackMonth && fallbackAmount > 0
+              ? [{
+                  teacherName,
+                  region,
+                  mosque,
+                  amountDue: fallbackAmount,
+                  amountPaid: parseAmount(row['المجموع'] || row['الموجوع'] || row['المدفوع']) || fallbackAmount,
+                  month: fallbackMonth,
+                  year,
+                  notes,
+                }]
+              : []
+
+          if (!teacherName || rewardRows.length === 0) {
+            errorCount++
+            errors.push(`تم تخطي صف بدون مكافآت: ${teacherName || 'غير معروف'}`)
+            continue
           }
 
-          const res = await fetch('/api/rewards', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(rewardData),
-          })
+          for (const rewardData of rewardRows) {
+            const res = await fetch('/api/rewards', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(rewardData),
+            })
 
-          if (res.ok) {
-            successCount++
-          } else {
-            errorCount++
-            errors.push(`فشل في: ${rewardData.teacherName}`)
+            if (res.ok) {
+              successCount++
+            } else {
+              errorCount++
+              errors.push(`فشل في: ${rewardData.teacherName} - ${rewardData.month}`)
+            }
           }
         } catch (error) {
           errorCount++
@@ -273,14 +407,16 @@ export default function RewardsPage() {
               <span>إضافة مكافأة</span>
             </Link>
 
-            <button
-              onClick={() => setShowImportDialog(true)}
-              disabled={importing}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
-            >
-              <Upload size={16} />
-              <span>{importing ? 'جاري الاستيراد...' : 'استيراد'}</span>
-            </button>
+            {canImport && (
+              <button
+                onClick={() => setShowImportDialog(true)}
+                disabled={importing}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
+              >
+                <Upload size={16} />
+                <span>{importing ? 'جاري الاستيراد...' : 'استيراد'}</span>
+              </button>
+            )}
 
             <button
               onClick={exportToExcel}
@@ -291,7 +427,7 @@ export default function RewardsPage() {
             </button>
           </div>
 
-          {showImportDialog && (
+          {canImport && showImportDialog && (
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
               <div className="bg-white rounded-xl p-6 w-full max-w-md">
                 <h3 className="text-lg font-bold mb-4">استيراد مكافآت من Excel</h3>

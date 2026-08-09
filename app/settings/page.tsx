@@ -30,6 +30,16 @@ export default function SettingsPage() {
     permissions: [] as string[],
   })
   const { isAdmin } = useAuth()
+  const availablePermissions = [
+    'التنمية الإدارية',
+    'الحلقات التربوية',
+    'المحاسبة',
+    'العاملين',
+    'المساجد',
+    'الرئيسية',
+    'حذف العاملين',
+    'استيراد البيانات',
+  ]
 
   useEffect(() => {
     fetchData()
@@ -319,7 +329,7 @@ export default function SettingsPage() {
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">الصلاحيات</label>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                        {['التنمية الإدارية', 'الحلقات التربوية', 'المحاسبة', 'العاملين', 'المساجد', 'الرئيسية', 'حذف العاملين'].map((permission) => (
+                        {availablePermissions.map((permission) => (
                           <button
                             key={permission}
                             type="button"
